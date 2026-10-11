@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI视频生成</title>
+<style>
+body{font-family:system-ui;max-width:900px;margin:3rem auto;padding:0 1rem;}
+textarea{width:100%;height:120px;padding:10px;font-size:16px;}
+button{padding:10px 20px;margin-top:10px;cursor:pointer;}
+#result{margin-top:20px;}
+video{max-width:100%;margin-top:10px;}
+</style>
+</head>
+<body>
+<h2>AI视频生成（Mock）</h2>
+<div>
+  <textarea id="promptInput" placeholder="输入视频提示词，例如：一只小猫在草地上走路"></textarea>
+  <br/>
+  <button id="submitBtn">提交生成</button>
+</div>
+<div id="result"></div>
+
+<script>
+const submitBtn = document.getElementById("submitBtn");
+const promptInput = document.getElementById("promptInput");
+const resultDom = document.getElementById("result");
+
+async function pollTask(taskId){
+  const timer = setInterval(async ()=>{
+    const resp = await fetch(`/video/task/${taskId}`);
+    const json = await resp.json();
+    if(json.data.status === "done"){
+      clearInterval(timer);
+      resultDom.innerHTML += `<p>✅生成完成</p>
+      <video controls>
+        <source src="/static/sample.mp4" type="video/mp4">
+      </video>`;
+    }else if(json.data.status === "running"){
+      resultDom.innerHTML = "<p>⏳视频生成中，请等待...</p>";
+    }
+  },1000);
+}
+
+submitBtn.onclick = async ()=>{
+  const prompt = promptInput.value.trim();
+  if(!prompt){
+    alert("请输入提示词");
+    return;
+  }
+  resultDom.innerHTML = "<p>📤提交任务...</p>";
+  try{
+    const res = await fetch("/video/create",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({prompt})
+    });
+    const json = await res.json();
+    const taskId = json.data.task_id;
+    resultDom.innerHTML = `<p>任务ID：${taskId}</p>`;
+    pollTask(taskId);
+  }catch(err){
+    resultDom.innerHTML = "<p>❌请求失败</p>";
+    console.error(err);
+  }
+}
+</script>
+</body>
+</html>

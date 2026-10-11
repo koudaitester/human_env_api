@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# 临时、日志
+tmp/
+logs/
+*.log
+
+# 环境变量
+.env
+
+# IDE & Mac
+.vscode/
+.DS_Store
