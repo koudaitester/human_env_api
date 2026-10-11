@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from routers import health, env, video
 import os
+from routers import llama
 
 app = FastAPI(title="${PROJECT_NAME} API")
 
@@ -12,10 +13,13 @@ app.mount("/static", StaticFiles(directory="html_basic"), name="static")
 app.include_router(health.router)
 app.include_router(env.router)
 app.include_router(video.router)
+app.include_router(llama.router)
+
+app.mount("/html_basic", StaticFiles(directory="html_basic"), name="static")
 
 @app.get("/")
 async def root():
-    return {"msg":"Project scaffold ready", "project":"${PROJECT_NAME}", "static_page": "/static/index.html"}
+    return {"msg":"Project scaffold ready", "project":"${PROJECT_NAME}", "static_page": "/html_basic/index.html"}
 
 if __name__ == "__main__":
     import uvicorn
