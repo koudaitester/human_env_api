@@ -1,14 +1,19 @@
 from .base_service import BaseService
+from services.llama_service import LlamaService
 
 class VisionService(BaseService):
-    @staticmethod
-    async def image_analyze(image_path: str, prompt: str):
-        # Mock返回，演示截图用，后续替换成LLaVA真实调用
-        mock_data = {
-            "summary": "室内人居环境，墙面完好，窗户半开。",
-            "risk": ["开窗会引入室外污染物，PM2.5存在升高风险"],
-            "suggest": "污染天关闭窗户，开启空气净化设备。"
-        }
-        return BaseService.success(mock_data)
+    def __init__(self):
+        self.llama = LlamaService()
 
-vision_service = VisionService()
+    # 只保留 image_base64 一个入参，prompt写在内部
+    async def image_analyze(self, image_base64: str):
+        prompt = """
+你是人居微环境检测专家。分析图片，输出JSON，只返回JSON，不要多余文字。
+字段：risk_level(high/medium/low), summary, suggestions(数组)
+知识库规则：
+1. PM2.5>20 呼吸道敏感人群会感到不适；
+2. 能见度差代表空气污染；
+3. 识别积水、霉菌、杂物堆积等室内隐患。
+"""
+        llm_result = await self.llama.call_llama(prompt, image_base64)
+        return llm_result
