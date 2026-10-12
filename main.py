@@ -1,25 +1,12 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from routers import health, env, video
-import os
-from routers import llama
+from routers import api_router
 
-app = FastAPI(title="${PROJECT_NAME} API")
-
-# 挂载静态页面目录
-app.mount("/static", StaticFiles(directory="html_basic"), name="static")
-
-# 注册路由
-app.include_router(health.router)
-app.include_router(env.router)
-app.include_router(video.router)
-app.include_router(llama.router)
-
-app.mount("/html_basic", StaticFiles(directory="html_basic"), name="static")
+app = FastAPI(title="Human In API", version="0.1.0")
+app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
-    return {"msg":"Project scaffold ready", "project":"${PROJECT_NAME}", "static_page": "/html_basic/index.html"}
+    return {"msg": "Human In API service running"}
 
 if __name__ == "__main__":
     import uvicorn

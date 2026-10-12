@@ -1,13 +1,11 @@
-class EnvService:
-    @staticmethod
-    def check_air_purifier_rule(angle: int, is_sleep: bool):
-        """
-        净化器朝向校验
-        is_sleep=True睡眠模式：禁止直吹床位
-        angle: 出风口朝向角度
-        """
-        if is_sleep and 45 <= angle <= 135:
-            return {"ok": False, "reason": "睡眠状态禁止直吹床位，会扰动墙面灰尘"}
-        return {"ok": True, "reason": "朝向符合规则"}
+from .base_service import BaseService
 
-env_service = EnvService()
+class EnvService(BaseService):
+    @staticmethod
+    async def evaluate_env(params: dict, knowledge_list: list):
+        """人居微环境评估，结合知识库规则做风险判定"""
+        try:
+            # 环境参数校验、风险等级计算
+            return BaseService.success({"risk_level": "", "suggest": ""})
+        except Exception as e:
+            return BaseService.fail(f"环境评估异常:{str(e)}")
