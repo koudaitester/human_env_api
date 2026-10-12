@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Human In API 演示面板</title>
+    <style>
+        body {font-family: system-ui; max-width:900px; margin:40px auto; padding:0 20px;}
+        .card {border:1px solid #ccc; border-radius:10px; padding:20px; margin-bottom:24px;}
+        .result {margin-top:12px; padding:12px;background:#f6f6f6;white-space:pre-wrap;}
+    </style>
+</head>
+<body>
+<h1>人居微环境视觉检测系统 - 演示面板</h1>
+
+<div class="card">
+    <h3>1. 图片视觉分析</h3>
+    <input type="file" id="imgFile" accept="image/*">
+    <br>
+    <button onclick="submitImage()">提交分析</button>
+    <div class="result" id="imgResult"></div>
+</div>
+
+<div class="card">
+    <h3>2. 环境参数评估</h3>
+    <div>PM2.5：<input type="number" id="pm25" value="22"></div>
+    <div>温度：<input type="number" id="temp" value="23"></div>
+    <div>湿度：<input type="number" id="hum" value="48"></div>
+    <button onclick="submitEnv()">评估风险</button>
+    <div class="result" id="envResult"></div>
+</div>
+
+<script>
+const baseUrl = "/api/v1";
+
+async function submitImage(){
+    const fd = new FormData();
+    fd.append("file", document.getElementById("imgFile").files[0]);
+    fd.append("prompt","识别图片中的室内环境，列出潜在风险");
+    const resp = await fetch(`${baseUrl}/vision/analyze_image`,{method:"POST",body:fd});
+    const data = await resp.json();
+    document.getElementById("imgResult").textContent = JSON.stringify(data,null,2);
+}
+
+async function submitEnv(){
+    const payload = {
+        pm25: Number(document.getElementById("pm25").value),
+        temperature: Number(document.getElementById("temp").value),
+        humidity: Number(document.getElementById("hum").value)
+    }
+    const resp = await fetch(`${baseUrl}/env/evaluate`,{
+        method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    document.getElementById("envResult").textContent = JSON.stringify(data,null,2);
+}
+</script>
+</body>
+</html>

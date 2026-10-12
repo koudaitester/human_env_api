@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Body
-from pydantic import BaseModel
+from fastapi import APIRouter, UploadFile, File, Form
 from services import VisionService
 
 router = APIRouter()
 
-class VisionAnalyzeReq(BaseModel):
-    image_path: str
-    prompt: str
-
-@router.post("/analyze")
-async def vision_analyze(req: VisionAnalyzeReq = Body()):
-    return await VisionService.image_analyze(req.image_path, req.prompt)
+@router.post("/analyze_image")
+async def analyze_image(
+    prompt: str = Form(default="请识别图片内人居环境，找出风险点"),
+    file: UploadFile = File(...)
+):
+    # 保存上传图片到临时目录
+    tmp_path = f"./tmp/{file.filename}"
+    with open(tmp_path, "wb") as f:
+        f.write(await file.read())
+    res = await VisionService.image_analyze(tmp_path, prompt)
+    return res
