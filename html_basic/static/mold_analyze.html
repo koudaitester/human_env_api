@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人居微环境 - 霉菌风险评估</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 30px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 24px;
+        }
+        h1 {
+            color: #2d3748;
+            font-size: 24px;
+        }
+        .sub-title {
+            color: #718096;
+            margin-top: 6px;
+        }
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap:24px;
+        }
+        .card {
+            background: #fff;
+            border-radius:12px;
+            padding:24px;
+            box-shadow: 0 2px 10px #00000010;
+        }
+        .upload-area {
+            border:2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding:40px 20px;
+            text-align:center;
+            cursor:pointer;
+            transition: 0.2s;
+        }
+        .upload-area:hover {
+            border-color:#4299e1;
+        }
+        #img-preview {
+            max-width:100%;
+            max-height:320px;
+            margin-top:16px;
+            display:none;
+        }
+        button {
+            margin-top:20px;
+            width:100%;
+            padding:12px;
+            border:0;
+            background:#3182ce;
+            color:white;
+            border-radius:8px;
+            font-size:16px;
+            cursor:pointer;
+        }
+        button:disabled{
+            background:#a0aec0;
+            cursor:not-allowed;
+        }
+        .risk-tag{
+            display:inline-block;
+            padding:6px 12px;
+            border-radius:99px;
+            color:#fff;
+            font-weight:bold;
+            margin-bottom:16px;
+        }
+        .risk-low{background:#38a169;}
+        .risk-warn{background:#d69e2e;}
+        .risk-mid{background:#dd6b20;}
+        .risk-high{background:#c53030;}
+        .result-block h3{
+            color:#2d3748;
+            margin:14px 0 8px;
+        }
+        .result-block p{
+            color:#4a5568;
+            line-height:1.6;
+        }
+        .tips{
+            margin-top:24px;
+            color:#718096;
+            font-size:14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>人居微环境视觉检测</h1>
+            <div class="sub-title">霉菌风险评估工具（本地AI + RAG知识库）</div>
+        </header>
+        <div class="row">
+            <!-- 左侧上传 -->
+            <div class="card">
+                <div class="upload-area" id="drop-area">
+                    <p>点击或者拖拽图片到此处上传</p>
+                    <input type="file" id="file-input" accept="image/png,image/jpg,image/jpeg" hidden>
+                </div>
+                <img id="img-preview" alt="预览图片">
+                <button id="detect-btn" disabled>开始检测</button>
+            </div>
+            <!-- 右侧结果 -->
+            <div class="card">
+                <h2>评估结果</h2>
+                <div id="result-wrap">
+                    <p style="color:#718096;margin-top:20px;">上传图片并点击检测，此处展示风险报告</p>
+                </div>
+            </div>
+        </div>
+        <div class="tips">⚠️ 提示：本系统仅作为人居环境辅助评估，不能替代专业环境检测。</div>
+    </div>
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const dropArea = document.getElementById('drop-area');
+        const preview = document.getElementById('img-preview');
+        const detectBtn = document.getElementById('detect-btn');
+        const resultWrap = document.getElementById('result-wrap');
+        let selectedFile = null;
+
+        dropArea.onclick = () => fileInput.click();
+        fileInput.onchange = handleFile;
+
+        //拖拽支持
+        dropArea.ondragover = e => e.preventDefault();
+        dropArea.ondrop = e => {
+            e.preventDefault();
+            if (e.dataTransfer.files.length) {
+                handleFile({ target: { files: e.dataTransfer.files } });
+            }
+        }
+
+        function handleFile(e) {
+            const f = e.target.files[0];
+            if (!f) return;
+            selectedFile = f;
+            detectBtn.disabled = false;
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                preview.src = ev.target.result;
+                preview.style.display = "block";
+            }
+            reader.readAsDataURL(f);
+        }
+
+        detectBtn.onclick = async () => {
+            detectBtn.disabled = true;
+            detectBtn.innerText = "检测中，请等待...";
+            resultWrap.innerHTML = `<p>正在调用本地视觉模型，检索知识库...</p>`;
+            // ========= 后端接口地址 =========
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            try {
+                const res = await fetch("http://127.0.0.1:8000/api/v1/mold/visual", {
+                    method: "POST",
+                    body: formData
+                })
+                const apiResp = await res.json();
+                // 校验后端返回code
+                if (apiResp.code !== 200) {
+                    resultWrap.innerHTML = `<p style="color:red;">服务调用失败，code:${apiResp.code}</p>`;
+                    return;
+                }
+                // data是字符串，解析json
+                try {
+                    const data = JSON.parse(apiResp.data);
+                    resultWrap.innerHTML = `
+                            <span class="risk-tag ${data.riskClass}">${data.riskLevel}</span>
+                            <div class="result-block">
+                                <h3>风险描述</h3>
+                                <p>${data.desc}</p>
+                                <h3>整改建议</h3>
+                                <p>${data.suggest}</p>
+                            </div>
+                        `
+                } catch (parseErr) {
+                    resultWrap.innerHTML = `<p style="color:red;">模型返回内容解析失败，输出格式异常</p>`;
+                }
+            } catch (err) {
+                resultWrap.innerHTML = `<p style="color:red;">请求后端接口失败，请确认服务已经启动</p>`;
+            }
+            detectBtn.disabled = false;
+            detectBtn.innerText = "开始检测";
+        }
+    </script>
+</body>
+</html>
