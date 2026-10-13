@@ -2,6 +2,7 @@ import httpx
 import json
 from ollama import chat
 from utils.rag_helper import get_rag_knowledge
+from services.log_service import logger
 
 # 霉菌知识库标识
 MOLD_KNOWLEDGE_ID = "mold_rules.md"
@@ -22,13 +23,13 @@ class LlamaService:
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 resp = await client.post(self.ollama_url, json=payload)
-                print("ollama raw resp:", resp.text)
+                logger.info("ollama raw resp: " + resp.text)
                 data = resp.json()
                 if "response" not in data:
                     raise KeyError("missing response")
                 return json.loads(data["response"])
         except Exception as e:
-            print("大模型调用异常：", e)
+            logger.error("大模型调用异常：", e)
             # 降级mock
             return {
                 "risk_level": "medium",
@@ -59,6 +60,7 @@ class LlamaService:
 3. 缺少温湿度数据，明确说明：缺少温湿度，评估仅基于图像，存在局限性；
 4. 结尾带上免责提示：本结果仅AI辅助筛查，不能替代专业环境检测。
 """
+        logger.info("prompt: " + prompt)
         resp = chat(
             model="llava",
             messages=[{
@@ -92,6 +94,7 @@ class LlamaService:
 2. 区分灰尘、污渍、霉斑，不夸大；
 3. 结尾带上免责提示：本结果仅AI辅助筛查，不能替代专业环境检测。
 """
+        logger.info("prompt: " + prompt)
         resp = chat(
             model="llava",
             messages=[{

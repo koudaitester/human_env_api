@@ -1,4 +1,5 @@
 from .base_service import BaseService
+from services.log_service import logger
 
 class RagService(BaseService):
     @staticmethod
@@ -10,4 +11,5 @@ class RagService(BaseService):
             result = []
             return BaseService.success(result)
         except Exception as e:
+            logger.error("知识库检索异常：", e)
             return BaseService.fail(f"知识库检索异常:{str(e)}")

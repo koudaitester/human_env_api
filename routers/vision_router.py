@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form
 from services import VisionService
 import base64
+from services.log_service import logger
 
 router = APIRouter()
 vision_service = VisionService()
@@ -13,4 +14,5 @@ async def analyze_image(file: UploadFile = File(...)):
     image_b64 = base64.b64encode(file_bytes).decode("utf-8")
     # 3.传给service
     result = await vision_service.image_analyze(image_base64=image_b64)
+    logger.info("视觉分析结果: " + str(result))
     return result

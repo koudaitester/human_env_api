@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Query
 from services.llama_service import llama_service
 import base64
+from services.log_service import logger
 
 router = APIRouter()
 
@@ -8,6 +9,7 @@ router = APIRouter()
 async def mold_visual(file: UploadFile = File(...)):
     img_bytes = await file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+    logger.info("霉菌检测视觉分析接口调用")
     # 调用实例方法
     result = await llama_service.analyze_mold_visual(img_b64)
     return result
@@ -20,5 +22,6 @@ async def mold_full(
 ):
     img_bytes = await file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+    logger.info("霉菌检测全参数分析接口调用")
     result = await llama_service.analyze_mold_full(img_b64, temp, humidity)
     return result
