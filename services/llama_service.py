@@ -64,16 +64,17 @@ class LlamaService:
 # """
         prompt = """
     任务：人居环境霉菌图像评估。
-    硬性规则：
-    1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
-    2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
-    3. 必须包含4个key：riskLevel、riskClass、desc、suggest
-    4. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
+硬性规则：
+1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
+2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
+3. 全部内容**必须使用中文书写**，desc、suggest、riskLevel字段不允许出现英文
+4. 必须包含4个key：riskLevel、riskClass、desc、suggest
+5. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
 
-    输出示例（只参考结构，不要原样输出示例）：
-    {"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}
+输出示例（只参考结构，不要原样输出示例）：
+{"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}
 
-    你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
+你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
     """
         logger.info("prompt: " + prompt)
         resp = chat(
@@ -84,6 +85,7 @@ class LlamaService:
                 "images": [img_b64]
             }]
         )
+        logger.info("llava resp: " + str(resp))
         return {"code": 200, "data": resp["message"]["content"]}
 
     async def analyze_mold_full(self, img_b64: str, temp: float, humidity: float):
