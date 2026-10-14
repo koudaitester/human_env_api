@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史评估报告</title>
+    <style>
+        body { padding:2rem; font-family: system-ui; }
+        .item { border:1px solid #ccc; padding:1rem; margin-bottom:12px; cursor:pointer; border-radius:8px; }
+        .item:hover { background:#f6f6f6; }
+        .detail-block { margin-top:16px; padding:1rem; background:#f0f4f8; display:none; }
+        .thumb { max-width:200px; max-height:200px; }
+    </style>
+</head>
+<body>
+<h2>历史评估报告</h2>
+<div id="list-wrap"></div>
+<div class="detail-block" id="detailBlock"></div>
+
+<script>
+const listWrap = document.getElementById("list-wrap");
+const detailBlock = document.getElementById("detailBlock");
+
+// 加载报告列表
+async function loadList(){
+    const res = await fetch("/api/v1/report/list");
+    const data = await res.json();
+    listWrap.innerHTML = "";
+    data.forEach(item=>{
+        const div = document.createElement("div");
+        div.className="item";
+        div.innerHTML = `
+            <div>${item.type === 'image' ? "📷图片检测" : "🎬视频轮巡"}</div>
+            <div>时间：${new Date(item.create_time).toLocaleString()}</div>
+            <div>风险等级：${item.risk_level}</div>
+        `;
+        div.onclick = ()=>loadDetail(item.report_id);
+        listWrap.appendChild(div);
+    })
+}
+
+// 加载单条详情
+async function loadDetail(id){
+    const res = await fetch(`/api/report/${id}`);
+    const d = await res.json();
+    detailBlock.style.display="block";
+    detailBlock.innerHTML = `
+        <h3>报告详情</h3>
+        ${d.thumbnail ? `<img class="thumb" src="${d.thumbnail}">` : ""}
+        <p>类型：${d.type}</p>
+        <p>温湿度：温度${d.temp}℃，湿度${d.hum}%</p>
+        <pre>${JSON.stringify(d.result_json, null, 2)}</pre>
+    `
+}
+loadList();
+</script>
+</body>
+</html>
