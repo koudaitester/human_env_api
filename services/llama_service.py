@@ -92,24 +92,25 @@ class LlamaService:
         # Service：接收b64、温湿度，拉规则，拼接prompt，调用模型
         rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
         prompt = f"""
-你是人居环境霉菌评估专家。
-参考下面知识库规则：
+任务：人居环境霉菌综合风险评估。
+硬性规则：
+1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
+2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
+3. 全部内容必须使用中文书写，desc、suggest、riskLevel字段不允许出现英文
+4. 必须包含4个key：riskLevel、riskClass、desc、suggest
+5. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
+
+评估依据：
+【知识库规则】
 {rule_text}
-输入信息：
-图像观察结果：根据图片内容识别
-环境温度：{temp} ℃
+【环境参数】
+温度：{temp} ℃
 相对湿度：{humidity} %
-任务：综合上面全部信息，评估霉菌风险。
-输出固定结构：
-【霉菌视觉判定】
-【环境参数评估】
-【综合风险等级】
-【风险说明】
-【处置建议】
-约束：
-1. 严格遵循知识库温湿度阈值；
-2. 区分灰尘、污渍、霉斑，不夸大；
-3. 结尾带上免责提示：本结果仅AI辅助筛查，不能替代专业环境检测。
+
+输出示例（只参考结构，不要原样输出示例）：
+{{"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}}
+
+你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
 """
         logger.info("prompt: " + prompt)
         resp = chat(
