@@ -1,10 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from services.llama_service import llama_service
 import base64
 from services.log_service import logger
 import re
 from services.report_service import save_report
 import json
+from typing import Annotated
 
 router = APIRouter()
 
@@ -57,3 +58,41 @@ async def mold_full(
 
     result["data"] = raw
     return result
+
+# 多图综合评估接口：一组图片，同房间，返回一份汇总结果
+@router.post("/analyze_group")
+async def analyze_group_images(
+    images: Annotated[list[UploadFile], File(description="多张同房间图片，最多5张")],
+    temperature: float | None = None,
+    humidity: float | None = None
+):
+    MAX_IMG_COUNT = 5
+    if len(images) > MAX_IMG_COUNT:
+        raise HTTPException(status_code=400, detail=f"单次最多上传{MAX_IMG_COUNT}张同房间照片")
+    if len(images) < 1:
+        raise HTTPException(status_code=400, detail="至少上传一张图片")
+
+    img_b64_list = []
+    filenames = []
+    for upload_file in images:
+        file_bytes = await upload_file.read()
+        b64_str = base64.b64encode(file_bytes).decode("utf-8")
+        img_b64_list.append(b64_str)
+        filenames.append(upload_file.filename)
+
+    # 调用一次，送入全部图片
+    result = await llama_service.analyze_mold_group(
+        image_b64_list=img_b64_list,
+        filenames=filenames,
+        temp=temperature,
+        humidity=humidity
+    )
+    # 保存本组评估记录
+    archive_path = await llama_service.save_group_json([result])
+    return {
+        "group_files": filenames,
+        "temp": temperature,
+        "humidity": humidity,
+        "archive": archive_path,
+        "report": result
+    }

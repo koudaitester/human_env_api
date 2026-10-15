@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>多图霉菌评估测试</title>
+</head>
+<body>
+    <h3>上传同一房间多张图片</h3>
+    <input type="file" id="imgInput" multiple accept="image/*">
+    <br><br>
+    <label>温度：</label>
+    <input type="number" step="0.1" id="temp">
+    <label>湿度RH%：</label>
+    <input type="number" step="0.1" id="hum">
+    <br><br>
+    <button onclick="submitForm()">提交评估</button>
+    <pre id="result"></pre>
+
+<script>
+async function submitForm(){
+    const files = document.getElementById('imgInput').files;
+    const temp = document.getElementById('temp').value;
+    const hum = document.getElementById('hum').value;
+    const fd = new FormData();
+    for(let f of files){
+        fd.append("images", f);
+    }
+    if(temp) fd.append("temperature", temp);
+    if(hum) fd.append("humidity", hum);
+
+    const resp = await fetch("http://127.0.0.1:8000/api/v1/mold/analyze_group", {
+        method:"POST",
+        body: fd
+    });
+    const data = await resp.json();
+    document.getElementById('result').textContent = JSON.stringify(data,null,2);
+}
+</script>
+</body>
+</html>
