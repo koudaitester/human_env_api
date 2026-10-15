@@ -4,12 +4,19 @@ from routers import api_router
 from fastapi.responses import RedirectResponse
 import os
 from services.log_service import logger
+from services.dao.db_pool import init_pool, close_all_pool
+import atexit
 
 os.makedirs("./tmp", exist_ok=True)
 
 app = FastAPI(title="Human In API", version="0.1.0")
 app.mount("/html_basic/static", StaticFiles(directory="html_basic/static"), name="static")
 app.include_router(api_router, prefix="/api/v1")
+
+# 应用启动初始化连接池
+init_pool()
+# 退出时释放
+atexit.register(close_all_pool)
 
 @app.get("/", tags=["演示面板"])
 async def root():

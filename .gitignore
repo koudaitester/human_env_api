@@ -24,3 +24,6 @@ logs/
 # 日志
 log/*.log
 log/
+
+# .gitignore 追加
+config/db_config.yaml
