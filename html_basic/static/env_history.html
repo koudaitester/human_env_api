@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{margin:0;padding:16px;box-sizing:border-box;font-family:system-ui}
+.tab-wrap{margin-bottom:12px}
+.tab-btn{padding:8px 14px;border:1px solid #ccc;background:#f8f8f8;cursor:pointer}
+.tab-btn.active{background:#2196F3;color:white;border-color:#2196F3}
+.tab-content{display:none}
+.tab-content.active{display:block}
+#chartBox{width:100%;height:420px;}
+.risk-item{padding:10px;background:#fff3cd;border:1px solid #ffc107;margin:8px 0;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="tab-wrap">
+    <button class="tab-btn active" onclick="switchTab('chartTab')">温湿度曲线</button>
+    <button class="tab-btn" onclick="switchTab('riskTab')">预警分析</button>
+</div>
+
+<!-- Tab1 曲线 -->
+<div id="chartTab" class="tab-content active">
+    <button onclick="loadData()">刷新曲线</button>
+    <div id="chartBox"><canvas id="chartCanvas"></canvas></div>
+</div>
+
+<!-- Tab2 预警结果 -->
+<div id="riskTab" class="tab-content">
+    <button onclick="loadRisk()">刷新风险分析</button>
+    <div id="riskPanel"></div>
+</div>
+
+<script>
+let chart = null;
+
+// Tab切换
+function switchTab(tabId){
+    document.querySelectorAll(".tab-content").forEach(el=>el.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(el=>el.classList.remove("active"));
+    document.getElementById(tabId).classList.add("active");
+    event.target.classList.add("active");
+}
+
+// 加载曲线
+async function loadData(){
+    const res = await fetch("/api/v1/business/history?limit=100");
+    const json = await res.json();
+    const dataList = json.data
+    const labels = dataList.map(item=>new Date(item.time).toLocaleString());
+    const tempArr = dataList.map(item=>item.temp);
+    const humArr = dataList.map(item=>item.hum);
+    if(chart) chart.destroy();
+    const ctx = document.getElementById("chartCanvas").getContext("2d");
+    chart = new Chart(ctx,{
+        type:"line",
+        data:{
+            labels,
+            datasets:[
+                {label:"温度 ℃",data:tempArr,borderColor:"#f44336",fill:false,yAxisID:"yTemp"},
+                {label:"湿度 %",data:humArr,borderColor:"#2196F3",fill:false,yAxisID:"yHum"}
+            ]
+        },
+        options:{
+            responsive:true,
+            scales:{
+                yTemp:{type:"linear",position:"left",title:{display:true,text:"温度 ℃"}},
+                yHum:{type:"linear",position:"right",title:{display:true,text:"相对湿度 %"},grid:{drawOnChartArea:false}}
+            }
+        }
+    })
+}
+
+// 加载风险预警
+async function loadRisk(){
+    const resp = await fetch("/api/v1/business/risk?limit=100");
+    const result = await resp.json();
+    const panel = document.getElementById("riskPanel");
+    if(!result.has_risk){
+        panel.innerHTML = `<div>✅ 未检测到连续高湿时段，无霉菌风险</div>`;
+        return;
+    }
+    let html = `<h3>⚠️ 检测到霉菌高湿风险时段</h3>`;
+    result.risk_periods.forEach(p=>{
+        html += `<div class="risk-item">${p.msg}<br/>起始：${new Date(p.start).toLocaleString()}<br/>结束：${new Date(p.end).toLocaleString()}</div>`
+    })
+    panel.innerHTML = html;
+}
+
+loadData();
+loadRisk();
+</script>
+</body>
+</html>
