@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>注册</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui, sans-serif;}
+body{height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f5f7;}
+.box{width:340px;padding:30px;background:#fff;border-radius:10px;box-shadow:0 2px 12px #00000015;}
+h2{text-align:center;margin-bottom:24px;color:#2c3e50;}
+input{width:100%;padding:10px 12px;margin:8px 0;border:1px solid #ddd;border-radius:6px;font-size:16px;}
+button{width:100%;padding:11px;border:none;background:#2c3e50;color:#fff;border-radius:6px;font-size:16px;margin-top:12px;cursor:pointer;}
+.link{margin-top:16px;text-align:center;color:#444;font-size:14px;}
+a{color:#3498db;text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="box">
+<h2>账号注册</h2>
+<input type="text" id="username" placeholder="用户名">
+<input type="password" id="password" placeholder="密码">
+<button onclick="doRegister()">注册</button>
+<div class="link">已有账号？<a href="login.html">去登录</a></div>
+</div>
+
+<script>
+async function doRegister(){
+    const user = document.getElementById("username").value;
+    const pwd = document.getElementById("password").value;
+    if(!user || !pwd){
+        alert("请填写用户名密码");
+        return;
+    }
+    try{
+        const res = await fetch("/user/register",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({username:user,password:pwd})
+        });
+        const data = await res.json();
+        if(!res.ok){
+            alert(data.detail || "注册失败");
+            return;
+        }
+        alert("注册成功，请登录");
+        window.location.href = "login.html";
+    }catch(err){
+        alert("网络请求异常");
+        console.error(err);
+    }
+}
+</script>
+</body>
+</html>

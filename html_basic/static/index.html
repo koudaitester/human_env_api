@@ -94,6 +94,15 @@
 </div>
 
 <script>
+    // 公共请求封装，自动携带token
+    async function apiFetch(url, options={}){
+        const token = localStorage.getItem("access_token");
+        const headers = {...options.headers};
+        if(token){
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+        return fetch(url, {...options, headers});
+    }
     // 菜单切换逻辑
     const menuItems = document.querySelectorAll('.menu-item');
     const iframe = document.getElementById('content-iframe');

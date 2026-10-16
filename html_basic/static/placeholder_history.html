@@ -41,7 +41,7 @@ async function loadList(){
 
 // 加载单条详情
 async function loadDetail(id){
-    const res = await fetch(`/api/report/${id}`);
+    const res = await apiFetch(`/api/report/${id}`);
     const d = await res.json();
     detailBlock.style.display="block";
     detailBlock.innerHTML = `

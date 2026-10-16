@@ -25,7 +25,7 @@ app.include_router(user_router, prefix="/user")
 async def root():
     logger.info("访问根路径")
     # return {"msg": "Human In API service running，访问 /static/index.html 打开演示面板"}
-    return RedirectResponse(url="/html_basic/static/index.html")
+    return RedirectResponse(url="/html_basic/static/login.html")
 
 if __name__ == "__main__":
     import uvicorn

@@ -185,7 +185,7 @@
             formData.append("file", blob);
 
             try{
-                const res = await fetch("http://127.0.0.1:8000/api/v1/mold/visual",{
+                const res = await apiFetch("http://127.0.0.1:8000/api/v1/mold/visual",{
                     method:"POST",
                     body:formData
                 })

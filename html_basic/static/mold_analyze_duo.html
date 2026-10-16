@@ -359,7 +359,7 @@
                 if (tempVal) formData.append("temperature", tempVal);
                 if (humVal) formData.append("humidity", humVal);
 
-                const resp = await fetch("/api/v1/mold/analyze_group", {
+                const resp = await apiFetch("/api/v1/mold/analyze_group", {
                     method: "POST",
                     body: formData,
                 });
