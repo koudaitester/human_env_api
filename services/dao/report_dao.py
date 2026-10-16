@@ -1,6 +1,21 @@
 from .db_pool import get_conn, release_conn
 import json
 
+async def insert_report(type_str, temp, hum, thumbnail, result_json, risk_level, user_id):
+    conn = get_conn()
+    try:
+        row = await conn.fetchrow( # type: ignore
+            """
+            INSERT INTO report (type, temp, hum, thumbnail, result_json, risk_level, user_id)
+            VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7) RETURNING *
+            """,
+            type_str, temp, hum, thumbnail, result_json, risk_level, user_id
+        )
+        return dict(row)
+    finally:
+        conn.close()
+        release_conn(conn)
+
 async def insert_report_record(raw_input: dict, llm_result: dict, risk_level: str):
     conn = get_conn()
     cur = conn.cursor()

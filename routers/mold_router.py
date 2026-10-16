@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
 from services.llama_service import llama_service
 import base64
 from services.log_service import logger
@@ -6,6 +6,7 @@ import re
 from services.report_service import save_report
 import json
 from typing import Annotated
+from utils.deps import get_current_user
 
 router = APIRouter()
 
@@ -14,6 +15,7 @@ async def mold_visual(file: UploadFile = File(...)):
     img_bytes = await file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
     logger.info("霉菌检测视觉分析接口调用")
+    
     # 调用实例方法
     result = await llama_service.analyze_mold_visual(img_b64)
     raw = re.sub(r'```(json)?', '', result["data"]).strip()
@@ -24,12 +26,15 @@ async def mold_visual(file: UploadFile = File(...)):
 @router.post("/full")
 async def mold_full(
     file: UploadFile = File(...),
+    current_user = Depends(get_current_user),
     temp: float = Query(..., description="环境温度 ℃"),
     humidity: float = Query(..., description="相对湿度 %")
 ):
     img_bytes = await file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
     logger.info("霉菌检测全参数分析接口调用")
+    # current_user 是dict，包含 id, username
+    user_id = current_user["id"]
     result = await llama_service.analyze_mold_full(img_b64, temp, humidity)
     raw = re.sub(r'```(json)?', '', result["data"]).strip()
 
@@ -51,7 +56,8 @@ async def mold_full(
             hum=humidity,
             thumbnail=None,
             result_json=result,
-            risk_level=risk_level
+            risk_level=risk_level,
+            user_id=user_id # type: ignore
         )
     except Exception as e:
         logger.exception("保存报告入库异常", exc_info=e)

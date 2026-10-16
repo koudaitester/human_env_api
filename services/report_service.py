@@ -43,17 +43,18 @@ async def save_report(
     hum: Optional[float],
     thumbnail: Optional[str],
     result_json: dict,
-    risk_level: str
+    risk_level: str,
+    user_id: Optional[int] = None
 ) -> int:
     conn = await get_conn()
     logger.info(f"连接数据库成功: {conn}")
     # 核心修复：字典转json字符串
     json_str = json.dumps(result_json, ensure_ascii=False)
     sql = """
-        INSERT INTO report(type, temp, hum, thumbnail, result_json, risk_level)
-        VALUES($1,$2,$3,$4,$5,$6) RETURNING report_id
+    INSERT INTO report (type, temp, hum, thumbnail, result_json, risk_level, user_id)
+VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7) RETURNING *
     """
-    new_id = await conn.fetchval(sql, type_str, temp, hum, thumbnail, json_str, risk_level)
+    new_id = await conn.fetchval(sql, type_str, temp, hum, thumbnail, json_str, risk_level, user_id )
     logger.info(f"报告保存成功，report_id: {new_id}")
     await conn.close()
     return new_id

@@ -6,6 +6,7 @@ import os
 from services.log_service import logger
 from services.dao.db_pool import init_pool, close_all_pool
 import atexit
+from routers.user_router import router as user_router
 
 os.makedirs("./tmp", exist_ok=True)
 
@@ -17,6 +18,8 @@ app.include_router(api_router, prefix="/api/v1")
 init_pool()
 # 退出时释放
 atexit.register(close_all_pool)
+
+app.include_router(user_router, prefix="/user")
 
 @app.get("/", tags=["演示面板"])
 async def root():
