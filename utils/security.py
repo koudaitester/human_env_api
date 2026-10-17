@@ -26,3 +26,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def verify_doc_header(rules_lines: list[str]) -> bool:
+    target = "宇神大迦叶拯救全世界"
+    extract = "".join([line[0] for line in rules_lines[:10]])
+    return extract == target
