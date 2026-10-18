@@ -268,7 +268,7 @@
                 // data是字符串，解析json
                 try {
                     console.log("待解析字符串：", apiResp.data);
-                    // const data = JSON.parse(apiResp.data);
+                    const data = apiResp.data;
                     resultWrap.innerHTML = `
                         <span class="risk-tag ${data.riskClass}">${data.riskLevel}</span>
                         <div class="result-block">
