@@ -95,14 +95,32 @@
 
 <script>
     // 公共请求封装，自动携带token
-    async function apiFetch(url, options={}){
+    async function apiFetch(url, options = {}) {
+        console.log("请求URL:", url);
+
+        // 修复：options.headers为空时，默认是空对象，防止扩展运算符报错
+        const headers = { ...(options.headers || {}) };
         const token = localStorage.getItem("access_token");
-        const headers = {...options.headers};
-        if(token){
+        if (token) {
             headers["Authorization"] = `Bearer ${token}`;
         }
-        return fetch(url, {...options, headers});
+        // 默认Content-Type，POST JSON场景自动带上（上传文件不要用这个，上传保持原生fetch）
+        if (!options.body || !(options.body instanceof FormData)) {
+            headers["Content-Type"] = "application/json";
+        }
+        console.log(localStorage.getItem("access_token"))
+
+        const res = await fetch(url, { ...options, headers });
+
+        // 统一处理401：token失效/未登录，清空token，跳登录页
+        if (res.status === 401) {
+            localStorage.removeItem("access_token");
+            // 跳转到登录页面，改成你登录页面的地址
+            window.location.href = "login.html";
+        }
+        return res;
     }
+
     // 菜单切换逻辑
     const menuItems = document.querySelectorAll('.menu-item');
     const iframe = document.getElementById('content-iframe');
