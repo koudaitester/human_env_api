@@ -81,7 +81,6 @@ async def mold_full(
         logger.exception("保存报告入库异常", exc_info=e)
     return result
 
-
 # 多图综合评估接口：一组图片，同房间，返回一份汇总结果
 @router.post("/analyze_group")
 async def analyze_group_images(
