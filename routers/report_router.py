@@ -20,7 +20,6 @@ class ReportItem(BaseModel):
 class ReportDetail(ReportItem):
     result_json: dict
 
-
 @router.get("/list", response_model=list[ReportItem])
 async def get_report_list():
     conn = await get_conn()

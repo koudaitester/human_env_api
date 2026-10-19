@@ -180,6 +180,8 @@
         </div>
         <div class="tips">⚠️ 提示：本系统仅作为人居环境辅助评估，不能替代专业环境检测。</div>
     </div>
+
+    <script src="/html_basic/static/common.js"></script>
     <script>
         const fileInput = document.getElementById('file-input');
         const dropArea = document.getElementById('drop-area');
@@ -199,32 +201,6 @@
             if (e.dataTransfer.files.length) {
                 handleFile({ target: { files: e.dataTransfer.files } });
             }
-        }
-
-        async function apiFetch(url, options = {}) {
-            console.log("请求URL:", url);
-
-            // 修复：options.headers为空时，默认是空对象，防止扩展运算符报错
-            const headers = { ...(options.headers || {}) };
-            const token = localStorage.getItem("access_token");
-            if (token) {
-                headers["Authorization"] = `Bearer ${token}`;
-            }
-            // 默认Content-Type，POST JSON场景自动带上（上传文件不要用这个，上传保持原生fetch）
-            if (!options.body || !(options.body instanceof FormData)) {
-                headers["Content-Type"] = "application/json";
-            }
-            console.log(localStorage.getItem("access_token"))
-
-            const res = await fetch(url, { ...options, headers });
-
-            // 统一处理401：token失效/未登录，清空token，跳登录页
-            if (res.status === 401) {
-                localStorage.removeItem("access_token");
-                // 跳转到登录页面，改成你登录页面的地址
-                window.location.href = "login.html";
-            }
-            return res;
         }
 
         function handleFile(e) {
@@ -255,11 +231,12 @@
             }
 
             try {
-                const res = await apiFetch(url, {
+                const res = await apiRequest(url, {
                     method: "POST",
                     body: formData
                 })
                 const apiResp = await res.json();
+                console.log("后端返回:", apiResp);
                 // 校验后端返回code
                 if (apiResp.code !== 200) {
                     resultWrap.innerHTML = `<p style="color:red;">服务调用失败，code:${apiResp.code}</p>`;
@@ -267,8 +244,9 @@
                 }
                 // data是字符串，解析json
                 try {
-                    console.log("待解析字符串：", apiResp.data);
-                    const data = apiResp.data;
+                    const dataRaw = apiResp.data;
+                    const data = JSON.parse(dataRaw);
+                    console.log("解析后的data:", data);
                     resultWrap.innerHTML = `
                         <span class="risk-tag ${data.riskClass}">${data.riskLevel}</span>
                         <div class="result-block">

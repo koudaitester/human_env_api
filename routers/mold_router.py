@@ -60,6 +60,7 @@ async def mold_full(
     user_id = current_user["id"]
     result = await llama_service.analyze_mold_full(img_b64, temperature, humidity)
     raw = re.sub(r'```(json)?', '', result["data"]).strip()
+    logger.info(f"霉菌检测全参数分析原始结果: {raw}")
     try:
         data_dict = json.loads(raw)
     except json.JSONDecodeError:
@@ -79,6 +80,8 @@ async def mold_full(
         )
     except Exception as e:
         logger.exception("保存报告入库异常", exc_info=e)
+
+    result["data"] = raw
     return result
 
 # 多图综合评估接口：一组图片，同房间，返回一份汇总结果
