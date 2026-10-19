@@ -27,3 +27,7 @@ log/
 
 # .gitignore 追加
 config/db_config.yaml
+
+# 测试
+tests/*.md
+tests/
