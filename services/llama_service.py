@@ -8,6 +8,7 @@ from services.log_service import logger
 import os
 from services.dao.db_pool import get_conn, release_conn
 import re
+from services.prompt_service import get_prompt
 
 # 霉菌知识库标识
 MOLD_KNOWLEDGE_ID = "mold_rules.md"
@@ -52,40 +53,21 @@ class LlamaService:
         # Service：只拉知识库 + 拼接prompt + 调用大模型
         rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
 #         prompt = f"""
-# 你是人居环境霉菌评估专家。
-# 输入信息：
-# 参考下面知识库规则：
-# {rule_text}
-# 分析图片，只输出纯JSON文本。
+#     任务：人居环境霉菌图像评估。参考【知识库规则】{rule_text}
 # 硬性规则：
 # 1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
 # 2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
-# 3. 必须包含4个key：riskLevel、riskClass、desc、suggest
-# 4. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
+# 3. 全部内容**必须使用中文书写**，desc、suggest、riskLevel字段不允许出现英文
+# 4. 必须包含4个key：riskLevel、riskClass、desc、suggest
+# 5. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
+
 # 输出示例（只参考结构，不要原样输出示例）：
-# {"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}
+# {{"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}}
+
 # 你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
+#     """
+        prompt = get_prompt("mold_temp_hum_rag_rules", rule_text=rule_text)
 
-# 约束：
-# 1. 严格遵循知识库温湿度阈值；
-# 2. 区分灰尘、污渍、霉斑，不夸大；
-# 3. 缺少温湿度数据，明确说明：缺少温湿度，评估仅基于图像，存在局限性；
-# 4. 结尾带上免责提示：本结果仅AI辅助筛查，不能替代专业环境检测。
-# """
-        prompt = """
-    任务：人居环境霉菌图像评估。
-硬性规则：
-1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
-2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
-3. 全部内容**必须使用中文书写**，desc、suggest、riskLevel字段不允许出现英文
-4. 必须包含4个key：riskLevel、riskClass、desc、suggest
-5. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
-
-输出示例（只参考结构，不要原样输出示例）：
-{"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}
-
-你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
-    """
         logger.info("prompt: " + prompt)
         resp = chat(
             model="llava",

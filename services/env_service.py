@@ -1,4 +1,6 @@
 from services.dao.env_dao import insert_env_record, query_env_history
+from typing import List, Dict
+from pydantic import BaseModel
 
 class EnvService:
     async def save_env_data(self, temp: float, hum: float, remark: str = ""):
