@@ -52,20 +52,6 @@ class LlamaService:
     async def analyze_mold_visual(self, img_b64: str):
         # Service：只拉知识库 + 拼接prompt + 调用大模型
         rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
-#         prompt = f"""
-#     任务：人居环境霉菌图像评估。参考【知识库规则】{rule_text}
-# 硬性规则：
-# 1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
-# 2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
-# 3. 全部内容**必须使用中文书写**，desc、suggest、riskLevel字段不允许出现英文
-# 4. 必须包含4个key：riskLevel、riskClass、desc、suggest
-# 5. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
-
-# 输出示例（只参考结构，不要原样输出示例）：
-# {{"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}}
-
-# 你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
-#     """
         prompt = get_prompt("mold_temp_hum_rag_rules", rule_text=rule_text)
 
         logger.info("prompt: " + prompt)
@@ -80,30 +66,13 @@ class LlamaService:
         logger.info("llava resp: " + str(resp))
         return {"code": 200, "data": resp["message"]["content"]}
 
-    async def analyze_mold_full(self, img_b64: str, temp: float, humidity: float):
+    async def analyze_mold_full(self, img_b64: str, temperature: float, humidity: float):
         # Service：接收b64、温湿度，拉规则，拼接prompt，调用模型
         rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
-        prompt = f"""
-任务：人居环境霉菌综合风险评估。
-硬性规则：
-1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
-2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
-3. 全部内容必须使用中文书写，desc、suggest、riskLevel字段不允许出现英文
-4. 必须包含4个key：riskLevel、riskClass、desc、suggest
-5. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
+        if temperature is None or humidity is None:
+            raise ValueError("温湿度参数不能为空")
 
-评估依据：
-【知识库规则】
-{rule_text}
-【环境参数】
-温度：{temp} ℃
-相对湿度：{humidity} %
-
-输出示例（只参考结构，不要原样输出示例）：
-{{"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}}
-
-你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
-"""
+        prompt = get_prompt("mold_full_rag_rules", rule_text=rule_text, temperature=temperature, humidity=humidity)
         logger.info("prompt: " + prompt)
         resp = chat(
             model="llava",
@@ -115,13 +84,13 @@ class LlamaService:
         )
         return {"code": 200, "data": resp["message"]["content"]}
 
-    async def analyze_mold_group(self, image_b64_list: list[str], filenames: list[str], temp: float|None, humidity: float|None):
+    async def analyze_mold_group(self, image_b64_list: list[str], filenames: list[str], temperature: float|None, humidity: float|None):
         rule_text = get_rag_knowledge("mold_rules.md")
         prompt = f"""
     {rule_text}
     本次巡检一共 {len(image_b64_list)} 张照片，文件名列表：{filenames}
     全部照片属于**同一个人居房间/空间**。
-    环境参数：温度 {temp}℃，相对湿度 {humidity}%。
+    环境参数：温度 {temperature}℃，相对湿度 {humidity}%。
 
     任务：综合全部照片画面，对这整个空间做霉菌风险综合评估。
     禁止对每张图片单独输出评估，只输出一份整体评估JSON。
@@ -162,14 +131,14 @@ class LlamaService:
 
         data["disclaimer"] = DISCLAIMER
         data["file_list"] = filenames
-        data["temperature"] = temp
+        data["temperature"] = temperature
         data["humidity"] = humidity
         return data
 
     async def save_group_json(self, result_list: list[dict]):
         report = result_list[0]
         filenames = report.get("file_list", [])
-        temp = report.get("temperature")
+        temperature = report.get("temperature")
         humidity = report.get("humidity")
 
         conn = get_conn()
@@ -184,7 +153,7 @@ class LlamaService:
             """
             cur.execute(insert_sql, (
                 ",".join(filenames),
-                temp,
+                temperature,
                 humidity,
                 report.get("group_risk_level"),
                 report.get("risk_summary"),

@@ -127,6 +127,7 @@
         <div class="tips">⚠️ 提示：本系统仅作为人居环境辅助评估，不能替代专业环境检测。持续轮巡会消耗算力。</div>
     </div>
 
+    <script src="/html_basic/static/common.js"></script>
     <script>
         const videoEl = document.getElementById('video-preview');
         const startBtn = document.getElementById('start-btn');
@@ -185,7 +186,7 @@
             formData.append("file", blob);
 
             try{
-                const res = await apiFetch("http://127.0.0.1:8000/api/v1/mold/visual",{
+                const res = await apiRequest("http://127.0.0.1:8000/api/v1/mold/visual",{
                     method:"POST",
                     body:formData
                 })

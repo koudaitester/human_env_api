@@ -17,7 +17,10 @@ ALLOWED_MIME = {"image/jpeg", "image/png"}
 
 
 @router.post("/visual")
-async def mold_visual(file: UploadFile = File(...)):
+async def mold_visual(
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_user)
+    ):
     # 文件校验
     if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="图片不能超过10MB")
@@ -34,7 +37,6 @@ async def mold_visual(file: UploadFile = File(...)):
     logger.info(f"霉菌检测视觉分析结果: {result}")
     return result
 
-
 @router.post("/full")
 async def mold_full(
     file: UploadFile = File(...),
@@ -42,6 +44,7 @@ async def mold_full(
     temperature: Annotated[float | None, Query(description="环境温度 ℃")] = None,
     humidity: Annotated[float | None, Query(description="相对湿度 %")] = None
 ):
+    logger.info(f"霉菌检测全参数分析接口调用，温度: {temperature}, 湿度: {humidity}")
     # 文件校验
     if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="图片不能超过10MB")
@@ -56,7 +59,6 @@ async def mold_full(
 
     img_bytes = await file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-    logger.info("霉菌检测全参数分析接口调用")
     user_id = current_user["id"]
     result = await llama_service.analyze_mold_full(img_b64, temperature, humidity)
     raw = re.sub(r'```(json)?', '', result["data"]).strip()
@@ -121,7 +123,7 @@ async def analyze_group_images(
     result = await llama_service.analyze_mold_group(
         image_b64_list=img_b64_list,
         filenames=filenames,
-        temp=temperature,
+        temperature=temperature,
         humidity=humidity
     )
     # 保存本组评估记录

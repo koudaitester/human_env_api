@@ -225,9 +225,11 @@
             // 判断参数，自动切换接口
             const tempVal = tempInput.value.trim();
             const humidity = humidityInput.value.trim();
+
             let url = "http://127.0.0.1:8000/api/v1/mold/visual";
             if(tempVal && humidity){
-                url = `http://127.0.0.1:8000/api/v1/mold/full?temp=${tempVal}&humidity=${humidity}`;
+                console.log("启用联合评估接口，温度:", tempVal, "湿度:", humidity);
+                url = `http://127.0.0.1:8000/api/v1/mold/full?temperature=${tempVal}&humidity=${humidity}`;
             }
 
             try {

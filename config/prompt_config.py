@@ -18,6 +18,30 @@ PROMPT_TEMPLATES: Dict[str, str] = {
 你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
     """
     ,
+    "mold_full_rag_rules":"""
+任务：人居环境霉菌综合风险评估。
+硬性规则：
+1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
+2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
+3. 全部内容必须使用中文书写，desc、suggest、riskLevel字段不允许出现英文
+4. 必须包含4个key：riskLevel、riskClass、desc、suggest
+5. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
+
+评估依据：
+【知识库规则】
+{rule_text}
+【环境参数】
+温度：{temperature} ℃
+相对湿度：{humidity} %
+
+输出示例（只参考结构，不要原样输出示例）：
+{{"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}}
+
+你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
+"""
+,
+
+
     # 霉菌图像视觉提取：LLaVA专用，只输出客观结构化要素，不做风险判断、不给建议
     "mold_vision_extract": """
 你是室内人居环境图像观察助手。只客观描述图片里能肉眼看到的内容，不要做风险判断，不要推测看不见的内部情况，不要给出任何建议。
@@ -44,7 +68,7 @@ PROMPT_TEMPLATES: Dict[str, str] = {
 {image_struct_info}
 
 【环境参数】
-温度：{temp}℃，相对湿度：{rh}%
+温度：{temperature}℃，相对湿度：{humidity}%
 
 【知识库规则片段】
 {rag_retrieved_rules}
