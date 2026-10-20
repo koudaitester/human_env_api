@@ -43,20 +43,41 @@ PROMPT_TEMPLATES: Dict[str, str] = {
 
 
     # 霉菌图像视觉提取：LLaVA专用，只输出客观结构化要素，不做风险判断、不给建议
-    "mold_vision_extract": """
-你是室内人居环境图像观察助手。只客观描述图片里能肉眼看到的内容，不要做风险判断，不要推测看不见的内部情况，不要给出任何建议。
-按下面固定条目输出JSON，不要额外文字：
-{{
-  "space_type": "填写空间类型：卧室/客厅/书房/卫生间/厨房等",
-  "wall_info": "墙面材质，有无霉斑、深色水渍、起皮、鼓包",
-  "ceiling_info": "顶面状态，有无水渍、霉斑、脱落",
-  "floor_info": "地面材质，有无积水、潮湿痕迹",
-  "moisture_trace": "是否存在冷凝水珠、渗水痕迹",
-  "vent_light": "有无窗户，采光好坏，空间是否密闭阴暗",
-  "stacked_items": "是否有纸箱、织物等物品紧贴墙面摆放",
-  "other_detail": "其他可见环境细节"
-}}
-""",
+    "mold_vision_extract": """你是室内人居环境图像观察助手。只客观描述图片里肉眼可见细节，禁止风险判断、禁止推测、禁止给建议。
+输出固定JSON结构，每个key对应填写观测事实；看不到的内容填"未见"。
+不要输出markdown标记、不要额外解释文字。
+
+字段说明（仅给你参考，不要放到输出JSON里）：
+space_type：空间类型，可选：卧室/客厅/书房/卫生间/厨房/地下室/其他
+furniture_layout：列出可见家具、摆放位置，是否贴墙，家具底部/背面是否可见
+bedding_status：有无床、被褥层数、叠放状态、整洁度、有无灰尘污渍
+wall_info：墙面材质颜色，平整与否，霉斑/水渍/起皮/裂纹/积灰情况
+ceiling_info：顶面状态，水渍、霉斑、脱落开裂情况
+floor_info：地面材质，有无积水、水渍、灰尘污渍
+moisture_trace：冷凝水、渗水印、砖缝发黑、玻璃水汽等潮湿痕迹
+window_info：有无窗户、开合状态、玻璃洁净度，朝向无法识别写不明
+light_vent：自然光充足/一般/昏暗，空间是否密闭
+clutter：纸箱、衣物、盆栽等杂物，是否紧贴墙面堆放
+cleanliness：积灰、蛛网、污渍的具体位置
+other_detail：其余可见细节，无则填空
+
+输出JSON结构：
+{
+  "space_type": "",
+  "furniture_layout": "",
+  "bedding_status": "",
+  "wall_info": "",
+  "ceiling_info": "",
+  "floor_info": "",
+  "moisture_trace": "",
+  "window_info": "",
+  "light_vent": "",
+  "clutter": "",
+  "cleanliness": "",
+  "other_detail": ""
+}
+"""
+,
 
     # 霉菌综合评估：文本LLM专用，接收图像要素+温湿度+RAG召回规则，输出结构化评估JSON
     "mold_full_eval": """

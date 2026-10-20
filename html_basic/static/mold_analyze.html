@@ -113,10 +113,10 @@
         .risk-low {
             background: #38a169;
         }
-        .risk-warn {
+        .risk-primary {
             background: #d69e2e;
         }
-        .risk-mid {
+        .risk-medium {
             background: #dd6b20;
         }
         .risk-high {
@@ -247,8 +247,7 @@
                 // data是字符串，解析json
                 try {
                     const dataRaw = apiResp.data;
-                    const data = JSON.parse(dataRaw);
-                    console.log("解析后的data:", data);
+                    const data = dataRaw;
                     resultWrap.innerHTML = `
                         <span class="risk-tag ${data.riskClass}">${data.riskLevel}</span>
                         <div class="result-block">

@@ -8,6 +8,7 @@ import json
 from typing import Annotated
 from utils.deps import get_current_user
 from utils.validator import validate_range
+from services.mold_weight_service import calc_mold_weight_result
 
 router = APIRouter()
 
@@ -33,8 +34,13 @@ async def mold_visual(
     # 调用实例方法
     result = await llama_service.analyze_mold_visual(img_b64)
     raw = re.sub(r'```(json)?', '', result["data"]).strip()
-    result["data"] = raw
+    # result["data"] = raw
     logger.info(f"霉菌检测视觉分析结果: {result}")
+    #调用calc_mold_weight判断环境风险、建议
+    img_struct = raw
+    weight_result = calc_mold_weight_result(img_struct)
+    logger.info(f"霉菌检测视觉分析加权结果: {weight_result}")
+    result["data"] = weight_result
     return result
 
 @router.post("/full")

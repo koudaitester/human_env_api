@@ -52,7 +52,7 @@ class LlamaService:
     async def analyze_mold_visual(self, img_b64: str):
         # Service：只拉知识库 + 拼接prompt + 调用大模型
         rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
-        prompt = get_prompt("mold_temp_hum_rag_rules", rule_text=rule_text)
+        prompt = get_prompt("mold_vision_extract", rule_text=rule_text)
 
         logger.info("prompt: " + prompt)
         resp = chat(
