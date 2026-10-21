@@ -61,7 +61,12 @@ class LlamaService:
                 "role": "user",
                 "content": prompt,
                 "images": [img_b64]
-            }]
+            }],
+            options={
+            "temperature": 0.0,
+            "top_p": 0.1,
+            "seed": 42
+            }
         )
         logger.info("llava resp: " + str(resp))
         return {"code": 200, "data": resp["message"]["content"]}
