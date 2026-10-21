@@ -85,6 +85,8 @@ FEATURE_GROUPS: List[Tuple[List[str], int, str]] = [
      -12, "现场配有除湿设备，合理开启可有效控制湿度抑制霉菌"),
 ]
 
+# 否定词：关键词前面紧贴这些词，视为否定，不命中
+NEGATION_WORDS = ["没有", "无", "未见", "未发现", "不存在", "无明显", "无可见"]
 
 # 温湿度阈值（和 mode_rules.md 对齐）
 HUMIDITY_RULES: List[Tuple[float, int, str]] = [
@@ -119,6 +121,16 @@ JUNK_PHRASES = [
     "床品情况", "顶面状态", "地面材质", "潮湿痕迹", "整体干净度",
 ]
 
+def _is_negated(text: str, kw: str) -> bool:
+    """检查 kw 前面是否紧跟否定词"""
+    idx = text.find(kw.lower())
+    if idx <= 0:
+        return False
+    prefix = text[max(0, idx - 3):idx]
+    for neg in NEGATION_WORDS:
+        if neg in prefix:
+            return True
+    return False
 
 def _normalize_text(text: str) -> str:
     """文本归一化：去空白、统一小写，避免大小写/全半角问题"""
@@ -159,6 +171,9 @@ def extract_features(img_struct: dict) -> List[Dict]:
     for keywords, weight, suggest in FEATURE_GROUPS:
         for kw in keywords:
             if kw.lower() in all_text:
+                if _is_negated(all_text, kw):
+                    logger.info(f"[mold_weight] 关键词 {kw} 被否定词否定，忽略")
+                    continue
                 hit_features.append({
                     "name": keywords[0],   # 用组内第一个词作为规范名
                     "matched_keyword": kw,
@@ -245,7 +260,7 @@ def calc_mold_weight_result(
 
     # 5. 建议按权重降序排序
     suggestions.sort(key=lambda x: x["weight"], reverse=True)
-    suggest_texts = [s["text"] for s in suggestions if s["text"]]
+    suggest_texts = [s["text"] for s in suggestions if s["text"]][0:3]  # 取前3条建议
 
     if not suggest_texts:
         suggest_texts = ["保持常规通风，定期监测温湿度即可"]
@@ -258,6 +273,6 @@ def calc_mold_weight_result(
         "riskLevel": level,
         "riskClass": cls,
         "desc": f"综合评估结果：{level}（总分{total_score}）",
-        "suggest": suggest_texts[0],
+        "suggest": "； ".join(suggest_texts)+"。",
         "extraNote": "基于图像特征关键词与实时温湿度加权计算，单张图片存在观测局限",
     }
