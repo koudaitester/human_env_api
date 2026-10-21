@@ -55,32 +55,102 @@
 
 ## 📁 完整目录结构
 ```text
-./
-├── main.py               # FastAPI 服务入口
-├── requirements.txt      # Python依赖清单
-├── .gitignore            # Git忽略文件配置
-├── config/
-│   └── llama_config.py   # Llama模型、Ollama服务配置
-├── routers/              # 接口路由层
-│   ├── health.py         # 健康检查接口
-│   ├── env.py            # 人居环境设备规则接口
-│   ├── video.py          # AI视频生成任务接口
-│   └── llama.py          # 本地Llama对话接口
-├── services/             # 业务逻辑层
-│   ├── __init__.py
-│   ├── env_service.py    # 人居设备规则业务
-│   ├── video_service.py  # 视频生成业务（当前Mock）
-│   └── llama_service.py  # Llama大模型调用业务
-├── utils/                # 通用工具函数
-│   ├── __init__.py
-│   └── common.py         # 统一返回体工具
-├── html_basic/           # 静态前端页面目录（挂载 /static）
-│   ├── index.html        # 前端页面：视频生成+图片上传
-│   └── sample.mp4        # Mock视频占位文件
-├── knowledge/
-│   └── scene_rule.md     # 人居环境场景知识库（RAG使用）
-├── tmp/                  # 临时文件目录，git忽略，存放音频/视频临时产物
-├── logs/                 # 日志目录
+.
+├── config
+│   ├── db_config.yaml
+│   ├── launch.json
+│   ├── llama_config.py
+│   └── prompt_config.py
+├── html_basic
+│   ├── index.html
+│   ├── js
+│   └── static
+│       ├── common.js
+│       ├── env_history.html
+│       ├── index.html
+│       ├── login.html
+│       ├── mold_analyze_duo.html
+│       ├── mold_analyze.html
+│       ├── mold_detect.html
+│       ├── placeholder_help.html
+│       ├── placeholder_history.html
+│       ├── register.html
+│       ├── test_upload.html
+│       └── vision_analysis.html
+├── knowledge
+│   ├── base_prompt.md
+│   ├── extraterrestrial_habitat_knowledge_base.md
+│   ├── mode_rules_origin.md
+│   ├── mode_rules.md
+│   ├── mold_risk_calc.md
+│   ├── scene_rule.md
+│   └── weather_rules.md
+├── log
+│   ├── 20261013.log
+│   ├── 20261014.log
+│   ├── 20261015.log
+│   ├── 20261016.log
+│   ├── 20261017.log
+│   ├── 20261018.log
+│   ├── 20261019.log
+│   ├── 20261020.log
+│   └── 20261021.log
+├── main.py
+├── README.md
+├── requirements.txt
+├── routers
+│   ├── __init__.py
+│   ├── audio_router.py
+│   ├── business_router.py
+│   ├── env_router.py
+│   ├── env.py
+│   ├── health.py
+│   ├── llama.py
+│   ├── llm_router.py
+│   ├── mold_router.py
+│   ├── rag_router.py
+│   ├── report_router.py
+│   ├── user_router.py
+│   ├── video.py
+│   └── vision_router.py
+├── schemas
+│   ├── env.py
+│   └── user.py
+├── services
+│   ├── __init__.py
+│   ├── audio_service.py
+│   ├── base_service.py
+│   ├── dao
+│   │   ├── __init__.py
+│   │   ├── app_user_dao.py
+│   │   ├── db_pool.py
+│   │   ├── env_dao.py
+│   │   └── report_dao.py
+│   ├── env_service.py
+│   ├── llama_service.py
+│   ├── llm_service.py
+│   ├── log_service.py
+│   ├── mold_weight_service.py
+│   ├── prompt_service.py
+│   ├── rag_service.py
+│   ├── report_service.py
+│   ├── user_service.py
+│   ├── video_service.py
+│   └── vision_service.py
+├── tests
+│   └── mold_full_test_notes.md
+├── tmp
+│   ├── 豆包 (1).png
+│   └── 豆包.png
+├── TODO.md
+└── utils
+    ├── __init__.py
+    ├── common.py
+    ├── deps.py
+    ├── rag_helper.py
+    ├── security.py
+    ├── tools.py
+    └── validator.py
 ```
 
 ## ⚙️ 环境准备
