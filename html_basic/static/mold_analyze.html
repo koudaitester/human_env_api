@@ -135,6 +135,19 @@
             color: #718096;
             font-size: 14px;
         }
+        .tag-high {
+            background-color: #dc2626;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .tag-low {
+            background-color: #16a34a;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
     </style>
 </head>
 <body>
@@ -244,21 +257,55 @@
                     resultWrap.innerHTML = `<p style="color:red;">服务调用失败，code:${apiResp.code}</p>`;
                     return;
                 }
-                // data是字符串，解析json
+                
                 try {
                     const dataRaw = apiResp.data;
                     const data = dataRaw;
+
                     resultWrap.innerHTML = `
                         <span class="risk-tag ${data.riskClass}">${data.riskLevel}</span>
                         <div class="result-block">
                             <h3>风险描述</h3>
                             <p>${data.desc}</p>
                             <h3>整改建议</h3>
-                            <p>${data.suggest}</p>
+                            <p id="suggest-p"></p>
                             <h3>备注</h3>
                             <p>${data.extraNote}</p>
                         </div>
                     `
+                    // 第二步：单独给这个p标签设置innerHTML，HTML标签正常解析
+                    const suggestP = document.getElementById('suggest-p');
+                    if (!suggestP) return;
+                    suggestP.innerText = ''; //清空
+
+                    // 分割标记，正则捕获分组
+                    const reg = /(【高风险】|【低风险】)/;
+                    const parts = data.suggest.split(reg);
+
+                    for(const part of parts) {
+                        if(part === '【高风险】') {
+                            const span = document.createElement('span');
+                            span.style.background = '#dc2626';
+                            span.style.color = '#fff';
+                            span.style.padding = '3px 7px';
+                            span.style.borderRadius = '6px';
+                            span.style.display = 'inline-block';
+                            span.textContent = '高风险';
+                            suggestP.appendChild(span);
+                        } else if(part === '【低风险】') {
+                            const span = document.createElement('span');
+                            span.style.background = '#16a34a';
+                            span.style.color = '#fff';
+                            span.style.padding = '3px 7px';
+                            span.style.borderRadius = '6px';
+                            span.style.display = 'inline-block';
+                            span.textContent = '低风险';
+                            suggestP.appendChild(span);
+                        } else {
+                            //普通文字
+                            suggestP.appendChild(document.createTextNode(part));
+                        }
+                    }
                 } catch (parseErr) {
                     resultWrap.innerHTML = `<p style="color:red;">模型返回内容解析失败，输出格式异常</p>`;
                 }
