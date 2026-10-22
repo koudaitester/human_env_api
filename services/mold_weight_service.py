@@ -8,6 +8,7 @@
 """
 from typing import Dict, List, Tuple
 from services.log_service import logger
+import re
 
 
 # ============================================================
@@ -17,34 +18,24 @@ from services.log_service import logger
 # 风险因子规则组：(同义词列表, 权重分, 命中后建议文案)
 # 同义词列表里任一词被命中，即视为命中该因子
 FEATURE_GROUPS: List[Tuple[List[str], int, str]] = [
-    # ---- 高权重：直接可见的霉/水证据 ----
-    (["霉斑", "黑斑", "黑色斑点", "黑灰斑块", "片状黑点", "发霉"],
-     40, "墙面存在霉斑痕迹，优先做局部除霉处理，同时控制环境湿度"),
+    # 【高风险：点状、连片深色斑块，优先怀疑霉斑】
+    (["深色斑块"],
+     40, "墙面存在深色斑块/霉菌点，有霉斑可能性，建议近距离复核确认，同步控制环境湿度"),
+    # 【中风险：流淌状水痕，优先判定水渍】
+    (["水痕印记"],
+     30, "墙面存在水痕印记，排查渗水源并持续观察"),
 
-    (["积水", "地面积水", "地面积水"],
+    (["积水", "地面积水"],
      35, "地面存在积水，及时擦干，保持地面干燥"),
 
-    (["水珠", "冷凝水", "结露", "水珠流淌"],
+    (["水珠", "冷凝水", "结露"],
      35, "观察到冷凝水珠，加强通风，降低室内湿度"),
 
-    (["水渍", "水痕", "深色印", "深色痕迹", "水迹"],
-     30, "墙面/顶面存在水渍痕迹，排查渗水源并持续观察"),
-
-    (["管道凝露", "管道滴水", "水管表面水珠"],
-     28, "管道外壁存在凝露，持续滴水会提高局部湿度，检查管道保温"),
-
-    (["地漏积水", "地漏干涸", "地漏异味"],
-     25, "地漏状态异常，容易滋生霉菌与异味，及时清理补水"),
-
-    # ---- 中权重：结构/摆放问题 ----
     (["起皮", "鼓包", "墙皮脱落"],
-     20, "墙皮起皮鼓包，可能存在渗水，建议检查墙体内部"),
-
-    (["墙纸起翘", "墙纸脱胶", "壁纸翘边"],
-     22, "墙纸起翘脱胶，大概率受潮，拆开检查背面是否长霉"),
+     20, "墙皮起皮鼓包，大概率受潮，建议检查墙体内部渗水"),
 
     (["紧贴墙面", "紧靠墙面", "贴墙摆放", "靠墙"],
-     20, "家具/杂物紧贴墙面摆放，建议与墙体预留空隙，利于空气流通"),
+     20, "家具/杂物紧贴墙面摆放，建议预留空隙，减少受潮发霉风险"),
 
     (["关闭", "关窗", "窗户紧闭"],
      15, "窗户处于关闭状态，建议每日定时开窗通风换气"),
@@ -52,41 +43,50 @@ FEATURE_GROUPS: List[Tuple[List[str], int, str]] = [
     (["密闭", "不通风", "空气不流通"],
      15, "空间相对密闭，建议增加通风频次"),
 
-    # ---- 低权重：蓄湿物品/采光 ----
     (["纸箱", "硬纸箱", "纸箱子"],
-     10, "室内堆放纸箱等易吸潮物品，建议远离墙面并定期清理"),
+     10, "室内堆放易吸潮纸箱，建议远离墙面并定期清理"),
 
     (["被子", "被褥", "厚床品"],
-     10, "床品被褥较厚，定期晾晒减少蓄湿"),
+     10, "厚床品容易蓄积潮气，建议定期晾晒"),
 
     (["布艺沙发", "布艺家具", "布艺窗帘"],
-     10, "布艺家具/窗帘容易吸附潮气，定期通风除潮"),
+     10, "布艺织物容易吸附潮气，定期通风晾晒"),
 
     (["地毯", "地垫"],
-     12, "地毯蓄湿性强，建议定期吸尘晾晒，避免底层长期潮湿"),
+     12, "地毯容易蓄积潮气，定期吸尘干燥"),
 
     (["昏暗", "光线差", "采光不足", "采光昏暗"],
-     10, "区域采光较差，紫外线不足，难以抑制霉菌"),
+     10, "区域采光昏暗，紫外线不足，不利于抑制霉菌"),
 
     (["盆栽", "绿植", "花盆"],
-     8, "墙角盆栽浇水易造成局部潮湿，建议移离墙面"),
+     8, "盆栽浇水容易增加局部湿度，尽量远离墙体"),
 
     (["浮尘", "灰尘", "积灰"],
-     5, "表面存在浮尘，定期清洁，避免粉尘成为霉菌载体"),
+     5, "表面积灰，灰尘容易附着潮气，定期清洁"),
 
     (["蛛网", "蜘蛛网"],
-     5, "角落有蛛网，长期未清洁，建议打扫"),
+     5, "角落存在蛛网，建议清洁，保持环境干燥"),
 
-    # ---- 负权重：有利特征（减分） ----
+    # 减分有利因子
     (["排风", "排风扇", "排气扇"],
-     -8, "空间配有排风设备，持续排风有助于降低潮湿风险"),
+     -8, "空间配有排风设备，合理开启可以降低潮湿风险"),
 
     (["除湿机", "除湿设备"],
-     -12, "现场配有除湿设备，合理开启可有效控制湿度抑制霉菌"),
+     -12, "现场配有除湿设备，合理使用能够抑制霉菌滋生"),
+
+     # 【高风险：零星点状深色小点，厨卫砖缝/瓷砖微小霉点典型场景】
+    (["点状深色小点"],
+    35, "墙面存在点状深色小点/霉菌斑块，是霉菌高发特征，建议近距离确认，及时清洁并控制湿度")
 ]
 
 # 否定词：关键词前面紧贴这些词，视为否定，不命中
-NEGATION_WORDS = ["没有", "无", "未见", "未发现", "不存在", "无明显", "无可见"]
+NEGATION_WORDS = ["没有", "无", "未见", "未发现", "不存在", "无明显", "无可见", "没有可见"]
+
+# 互斥分组配置
+MUTEX_GROUPS = [
+    {"keys": ["点状深色小点", "深色斑块"], "desc": "深色痕迹同源互斥"},
+    {"keys": ["水痕印记", "水渍印记"], "desc": "水痕同源互斥"},
+]
 
 # 温湿度阈值（和 mode_rules.md 对齐）
 HUMIDITY_RULES: List[Tuple[float, int, str]] = [
@@ -121,21 +121,58 @@ JUNK_PHRASES = [
     "床品情况", "顶面状态", "地面材质", "潮湿痕迹", "整体干净度",
 ]
 
+# 实体白名单：物品类关键词，在是否问句里不被后面的未见否定
+ENTITY_KW = {"纸箱", "盆栽", "被子", "被褥", "衣物"}
+
+def resolve_mutex_features(hit_features: list[dict], mutex_groups: list[dict]) -> list[dict]:
+    """
+    同源特征互斥去重算法
+    :param hit_features: 原始命中特征列表
+    :param mutex_groups: 互斥组配置，格式：[{"keys": ["A","B"], "desc": "说明"}]
+    :return: 去重之后的特征列表，同组只保留权重最高一条
+    """
+    result = hit_features.copy()
+    for group in mutex_groups:
+        group_keys = group["keys"]
+        # 筛选当前命中里属于这个互斥组的项
+        group_items = [item for item in result if item["name"] in group_keys]
+        if len(group_items) <= 1:
+            continue
+        # 按权重倒序，保留最高分那条
+        group_items.sort(key=lambda x: x["weight"], reverse=True)
+        keep_item = group_items[0]
+        # 删除本组其他条目
+        result = [x for x in result if x not in group_items or x == keep_item]
+        logger.info(f"[mold_weight][mutex] {group['desc']}, 保留特征: {keep_item['name']} weight={keep_item['weight']}")
+    return result
+
 def _is_negated(text: str, kw: str) -> bool:
-    """检查 kw 前面是否紧跟否定词"""
-    idx = text.find(kw.lower())
-    if idx <= 0:
-        return False
-    prefix = text[max(0, idx - 3):idx]
-    for neg in NEGATION_WORDS:
-        if neg in prefix:
-            return True
+    kw_lower = kw.lower()
+    sentences = re.split(r"[，。；]", text)
+    # 预清洗分句：去空白
+    sentences = [s.strip() for s in sentences if s.strip()]
+    
+    for i, sent in enumerate(sentences):
+        sent_lower = sent.lower()
+        if kw_lower not in sent_lower:
+            continue
+        # 规则1：当前分句内就同时有否定词
+        for neg in NEGATION_WORDS:
+            if neg in sent_lower:
+                # 是否问句里实体白名单保留
+                if "是否" in sent_lower and kw_lower in ENTITY_KW:
+                    continue
+                return True
+        # 规则2：当前分句是「是否XX」，后面紧邻的下一个分句是纯「未见/无」
+        if "是否" in sent_lower and i + 1 < len(sentences):
+            next_sent = sentences[i+1].lower()
+            if next_sent in ("未见", "无"):
+                return True
     return False
 
 def _normalize_text(text: str) -> str:
     """文本归一化：去空白、统一小写，避免大小写/全半角问题"""
     return str(text).strip().lower()
-
 
 def extract_features(img_struct: dict) -> List[Dict]:
     """
@@ -157,9 +194,7 @@ def extract_features(img_struct: dict) -> List[Dict]:
         if not field_value:
             continue
         val = str(field_value).strip()
-        if val in ("未见", "无", "未知", "") or len(val) < 3:
-            continue
-        if any(jp in val for jp in JUNK_PHRASES):
+        if val in ("未见", "无", "未知", ""):
             continue
         all_text += f" {val}"
 
@@ -233,6 +268,8 @@ def calc_mold_weight_result(
     """
     # 1. 图像特征命中
     features = extract_features(img_struct)
+    # 互斥组去重
+    features = resolve_mutex_features(features, MUTEX_GROUPS)
 
     total_score = 0
     suggestions = []   # [{weight, text}]
@@ -255,8 +292,9 @@ def calc_mold_weight_result(
         if t_score:
             suggestions.append({"weight": t_score, "text": t_suggest})
 
-    # 4. 定级
+    # 4. 定级&score上线100
     level, cls = _decide_level(total_score)
+    total_score = min(total_score, 100)
 
     # 5. 建议按权重降序排序
     suggestions.sort(key=lambda x: x["weight"], reverse=True)
