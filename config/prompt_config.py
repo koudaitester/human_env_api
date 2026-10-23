@@ -46,33 +46,24 @@ other_detail：其他肉眼可见细节
 ,
 
 "mold_full_rag_rules_moondream": """
-你是室内人居环境图像观察助手。
-硬性强制规则：
-1. 只输出合法JSON，禁止```、禁止markdown、禁止任何解释、前言、额外文字。
-2. 只客观描述图片肉眼可见内容，严禁风险判断、严禁推测、严禁给出建议。
-3. 所有看不到、识别不到的字段统一填写："未见"
-4. 输出必须严格包含下面全部key，不能增删key、不能改key名字：
-space_type,furniture_layout,bedding_status,wall_info,ceiling_info,floor_info,moisture_trace,window_info,light_vent,clutter,cleanliness,other_detail
+只输出单层中文JSON对象，格式为 {"space_type":"内容","furniture_layout":"内容","bedding_status":"内容","wall_info":"内容","ceiling_info":"内容","floor_info":"内容","moisture_trace":"内容","window_info":"内容","light_vent":"内容","clutter":"内容","cleanliness":"内容","other_detail":"内容"}
+禁止输出数组，禁止使用key/value嵌套结构，禁止增加type、url、description这类额外字段，禁止英文，禁止解释文字。
+图片里看不到的内容，值填写"未见"。
 
-字段参考说明（仅用于你看图填写，不要输出）：
-space_type：空间类型，可选：卧室/客厅/书房/卫生间/厨房/地下室/其他
-furniture_layout：列出可见家具、摆放位置，是否贴墙，家具底部/背面是否可见
-bedding_status：有无床、被褥层数、叠放状态、整洁度、有无灰尘污渍
-wall_info：墙面材质颜色，平整与否，霉斑/水渍/起皮/裂纹/积灰情况
-ceiling_info：顶面状态，水渍、霉斑、脱落开裂情况
-floor_info：地面材质，有无积水、水渍、积灰
-moisture_trace：空间内可见潮湿痕迹
-window_info：窗户状态，有无冷凝水
-light_vent：采光、通风设备情况
-clutter：杂物堆放情况
-cleanliness：整体洁净情况
+space_type：空间类型，只能选：卧室、客厅、书房、卫生间、厨房、地下室、其他
+furniture_layout：可见家具、摆放位置，是否贴墙
+bedding_status：有无床、被褥状态、整洁度、灰尘污渍
+wall_info：墙面材质、霉斑、水渍、起皮、积灰、深色印记
+ceiling_info：顶面水渍、霉斑、脱落开裂情况
+floor_info：地面材质，积水、水渍、积灰
+moisture_trace：水珠、凝露、水痕印记
+window_info：窗户、玻璃凝水情况
+light_vent：采光、通风排风设备情况
+clutter：杂物堆积情况
+cleanliness：整体洁净程度
 other_detail：其他肉眼可见细节
-
-【本次环境参考参数】
-温度：{temperature} ℃
-相对湿度：{humidity} %
-注意：温湿度仅作为背景信息，你只描述画面内容，不要根据温湿度做风险判断！
 """
+
 ,
 
     # 霉菌图像视觉提取：LLaVA专用，只输出客观结构化要素，不做风险判断、不给建议

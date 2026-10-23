@@ -1,3 +1,4 @@
+from asyncio import log
 import datetime
 
 import httpx
@@ -53,7 +54,7 @@ class LlamaService:
     async def analyze_mold_visual(self, img_b64: str):
         # Service：只拉知识库 + 拼接prompt + 调用大模型
         rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
-        prompt = get_prompt("mold_vision_extract", rule_text=rule_text)
+        prompt = get_prompt("mold_vision_extract_llava", rule_text=rule_text)
         #压缩base64图片
         # img_b64 = resize_image_for_llava(img_b64, 1000)
 
@@ -76,27 +77,28 @@ class LlamaService:
         logger.info("llava resp: " + str(resp))
         return {"code": 200, "data": resp["message"]["content"]}
 
-    async def analyze_mold_full(self, img_b64: str, temperature: float, humidity: float):
+    async def analyze_mold_full(self, img_b64: str, temperature: float|None = None, humidity: float|None = None):
         # Service：接收b64、温湿度，拉规则，拼接prompt，调用模型
-        rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
-        if temperature is None or humidity is None:
-            raise ValueError("温湿度参数不能为空")
+        # rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
+        # if temperature is None or humidity is None:
+        #     raise ValueError("温湿度参数不能为空")
 
-        prompt = get_prompt("mold_full_rag_rules_moondream", rule_text=rule_text, temperature=temperature, humidity=humidity)
-        # logger.info("prompt: " + prompt)
+        prompt = get_prompt("mold_vision_extract_llava")
+        logger.info("prompt: " + prompt)
+
         resp = chat(
-            model="moondream",
+            model="llava",
             messages=[{
                 "role": "user",
                 "content": prompt,
                 "images": [img_b64]
             }],
             options={
-            "temperature": 0.0,
+            "temperature": 0.1,
             "top_p": 0.1,
             "seed": 42,
-            "max_tokens": 1000,
-            "keepalive": "10m"
+            "max_tokens": 512,
+            "keepalive": "10m",
             }
         )
         return {"code": 200, "data": resp["message"]["content"]}

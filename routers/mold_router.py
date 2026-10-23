@@ -1,4 +1,7 @@
+from unittest import result
+
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
+from services import moondream_service
 from services.llama_service import llama_service
 import base64
 from services.log_service import logger
@@ -9,6 +12,7 @@ from typing import Annotated
 from utils.deps import get_current_user
 from utils.validator import validate_range
 from services.mold_weight_service import calc_mold_weight_result
+from services.moondream_service import moondream_service
 
 router = APIRouter()
 
@@ -65,13 +69,15 @@ async def mold_full(
 
     img_bytes = await file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-    user_id = current_user["id"]
-    result = await llama_service.analyze_mold_full(img_b64, temperature, humidity)
-    raw = re.sub(r'```(json)?', '', result["data"]).strip()
-    logger.info(f"霉菌检测全参数分析原始结果: {raw}")
+    # user_id = current_user["id"]
+    # result = await llama_service.analyze_mold_full(img_b64)
+    result = await moondream_service.analyze_mold_full(img_b64, temperature, humidity)
+    logger.info(f"霉菌检测全参数分析结果: {result}")
+    # raw = re.sub(r'```(json)?', '', result["data"]).strip()
+    # logger.info(f"霉菌检测全参数分析原始结果: {raw}")
 
     #调用calc_mold_weight判断环境风险、建议
-    img_struct = raw
+    img_struct = result["data"]
     weight_result = calc_mold_weight_result(img_struct, temperature, humidity)
     logger.info(f"霉菌检测视觉分析加权结果: {weight_result}")
     result["data"] = weight_result
