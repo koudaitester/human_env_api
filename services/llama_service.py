@@ -82,15 +82,22 @@ class LlamaService:
         if temperature is None or humidity is None:
             raise ValueError("温湿度参数不能为空")
 
-        prompt = get_prompt("mold_full_rag_rules", rule_text=rule_text, temperature=temperature, humidity=humidity)
-        logger.info("prompt: " + prompt)
+        prompt = get_prompt("mold_full_rag_rules_moondream", rule_text=rule_text, temperature=temperature, humidity=humidity)
+        # logger.info("prompt: " + prompt)
         resp = chat(
-            model="llava",
+            model="moondream",
             messages=[{
                 "role": "user",
                 "content": prompt,
                 "images": [img_b64]
-            }]
+            }],
+            options={
+            "temperature": 0.0,
+            "top_p": 0.1,
+            "seed": 42,
+            "max_tokens": 1000,
+            "keepalive": "10m"
+            }
         )
         return {"code": 200, "data": resp["message"]["content"]}
 

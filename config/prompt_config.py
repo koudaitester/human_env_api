@@ -18,31 +18,65 @@ PROMPT_TEMPLATES: Dict[str, str] = {
 你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
     """
     ,
-    "mold_full_rag_rules":"""
-任务：人居环境霉菌综合风险评估。
-硬性规则：
-1. 仅输出纯JSON字符串，绝对不能添加任何markdown标记，禁止```、禁止代码块
-2. 禁止输出任何解释、前言、说明文字、注释，只返回JSON
-3. 全部内容必须使用中文书写，desc、suggest、riskLevel字段不允许出现英文
-4. 必须包含4个key：riskLevel、riskClass、desc、suggest
-5. riskClass只能从下面4个里面选：risk-low / risk-warn / risk-mid / risk-high
+    "mold_full_rag_rules_llava": """你是室内人居环境图像观察助手。只客观描述图片里肉眼可见细节，禁止风险判断、禁止推测、禁止给建议。
+输出固定JSON结构，每个key对应填写观测事实；看不到的内容填"未见"。
+不要输出markdown标记、不要额外解释文字。
+字段说明（仅给你参考，不要放到输出JSON里）：
+space_type：空间类型，可选：卧室/客厅/书房/卫生间/厨房/地下室/其他
+furniture_layout：列出可见家具、摆放位置，是否贴墙，家具底部/背面是否可见
+bedding_status：有无床、被褥层数、叠放状态、整洁度、有无灰尘污渍
+wall_info：墙面材质颜色，平整与否，霉斑/水渍/起皮/裂纹/积灰情况
+ceiling_info：顶面状态，水渍、霉斑、脱落开裂情况
+floor_info：地面材质，有无积水、水渍、积灰
+moisture_trace：空间内可见潮湿痕迹
+window_info：窗户状态，有无冷凝水
+light_vent：采光、通风设备情况
+clutter：杂物堆放情况
+cleanliness：整体洁净情况
+other_detail：其他肉眼可见细节
 
-评估依据：
-【知识库规则】
-{rule_text}
-【环境参数】
+【本次环境参考参数】
 温度：{temperature} ℃
 相对湿度：{humidity} %
+注意：以上温湿度仅作为环境背景信息供你参考，你只描述图片画面内容，不要根据温湿度做风险判断！
 
-输出示例（只参考结构，不要原样输出示例）：
-{{"riskLevel":"低风险","riskClass":"risk-low","desc":"描述内容","suggest":"建议内容"}}
+输出JSON，严格只包含下面这些key：
+["space_type","furniture_layout","bedding_status","wall_info","ceiling_info","floor_info","moisture_trace","window_info","light_vent","clutter","cleanliness","other_detail"]
+"""
+,
 
-你的输出必须可以直接用JSON.parse解析，不能包含任何额外字符。
+"mold_full_rag_rules_moondream": """
+你是室内人居环境图像观察助手。
+硬性强制规则：
+1. 只输出合法JSON，禁止```、禁止markdown、禁止任何解释、前言、额外文字。
+2. 只客观描述图片肉眼可见内容，严禁风险判断、严禁推测、严禁给出建议。
+3. 所有看不到、识别不到的字段统一填写："未见"
+4. 输出必须严格包含下面全部key，不能增删key、不能改key名字：
+space_type,furniture_layout,bedding_status,wall_info,ceiling_info,floor_info,moisture_trace,window_info,light_vent,clutter,cleanliness,other_detail
+
+字段参考说明（仅用于你看图填写，不要输出）：
+space_type：空间类型，可选：卧室/客厅/书房/卫生间/厨房/地下室/其他
+furniture_layout：列出可见家具、摆放位置，是否贴墙，家具底部/背面是否可见
+bedding_status：有无床、被褥层数、叠放状态、整洁度、有无灰尘污渍
+wall_info：墙面材质颜色，平整与否，霉斑/水渍/起皮/裂纹/积灰情况
+ceiling_info：顶面状态，水渍、霉斑、脱落开裂情况
+floor_info：地面材质，有无积水、水渍、积灰
+moisture_trace：空间内可见潮湿痕迹
+window_info：窗户状态，有无冷凝水
+light_vent：采光、通风设备情况
+clutter：杂物堆放情况
+cleanliness：整体洁净情况
+other_detail：其他肉眼可见细节
+
+【本次环境参考参数】
+温度：{temperature} ℃
+相对湿度：{humidity} %
+注意：温湿度仅作为背景信息，你只描述画面内容，不要根据温湿度做风险判断！
 """
 ,
 
     # 霉菌图像视觉提取：LLaVA专用，只输出客观结构化要素，不做风险判断、不给建议
-    "mold_vision_extract": """你是室内人居环境图像观察助手。只客观描述图片里肉眼可见细节，禁止风险判断、禁止推测、禁止给建议。
+    "mold_vision_extract_llava": """你是室内人居环境图像观察助手。只客观描述图片里肉眼可见细节，禁止风险判断、禁止推测、禁止给建议。
 输出固定JSON结构，每个key对应填写观测事实；看不到的内容填"未见"。
 不要输出markdown标记、不要额外解释文字。
 
@@ -111,6 +145,35 @@ other_detail：其余可见细节，无则填空
   "cleanliness": "",
   "other_detail": ""
 }
+"""
+,
+"mold_vision_extract_moondream": """
+你是室内人居环境图像观察助手。
+硬性强制规则：
+1. 只输出合法JSON，禁止```、禁止markdown、禁止任何解释、前言、额外文字。
+2. 只客观描述图片肉眼可见内容，严禁风险判断、严禁推测、严禁给出建议。
+3. 所有看不到、识别不到的字段统一填写："未见"
+4. 输出必须严格包含下面全部key，不能增删key、不能改key名字：
+space_type,furniture_layout,bedding_status,wall_info,ceiling_info,floor_info,moisture_trace,window_info,light_vent,clutter,cleanliness,other_detail
+
+字段参考说明（仅用于你看图填写，不要输出）：
+space_type：空间类型，可选：卧室/客厅/书房/卫生间/厨房/地下室/其他
+furniture_layout：列出可见家具、摆放位置，是否贴墙，家具底部/背面是否可见
+bedding_status：有无床、被褥层数、叠放状态、整洁度、有无灰尘污渍
+wall_info：墙面材质颜色，平整与否，霉斑/水渍/起皮/裂纹/积灰情况
+ceiling_info：顶面状态，水渍、霉斑、脱落开裂情况
+floor_info：地面材质，有无积水、水渍、积灰
+moisture_trace：空间内可见潮湿痕迹
+window_info：窗户状态，有无冷凝水
+light_vent：采光、通风设备情况
+clutter：杂物堆放情况
+cleanliness：整体洁净情况
+other_detail：其他肉眼可见细节
+
+【本次环境参考参数】
+温度：{temperature} ℃
+相对湿度：{humidity} %
+注意：温湿度仅作为背景信息，你只描述画面内容，不要根据温湿度做风险判断！
 """
 ,
 

@@ -69,27 +69,33 @@ async def mold_full(
     result = await llama_service.analyze_mold_full(img_b64, temperature, humidity)
     raw = re.sub(r'```(json)?', '', result["data"]).strip()
     logger.info(f"霉菌检测全参数分析原始结果: {raw}")
-    try:
-        data_dict = json.loads(raw)
-    except json.JSONDecodeError:
-        data_dict = {}
-    risk_level = data_dict.get("riskLevel", "未知风险等级")
-    result["data"] = data_dict
-    logger.info(f"霉菌检测全参数分析结果: {result}")
-    try:
-        await save_report(
-            type_str="image",
-            temp=temperature,
-            hum=humidity,
-            thumbnail=None,
-            result_json=result,
-            risk_level=risk_level,
-            user_id=user_id
-        )
-    except Exception as e:
-        logger.exception("保存报告入库异常", exc_info=e)
 
-    result["data"] = raw
+    #调用calc_mold_weight判断环境风险、建议
+    img_struct = raw
+    weight_result = calc_mold_weight_result(img_struct, temperature, humidity)
+    logger.info(f"霉菌检测视觉分析加权结果: {weight_result}")
+    result["data"] = weight_result
+
+    # try:
+    #     data_dict = json.loads(raw)
+    # except json.JSONDecodeError:
+    #     data_dict = {}
+    # risk_level = data_dict.get("riskLevel", "未知风险等级")
+    # result["data"] = data_dict
+    # logger.info(f"霉菌检测全参数分析结果: {result}")
+    # try:
+    #     await save_report(
+    #         type_str="image",
+    #         temp=temperature,
+    #         hum=humidity,
+    #         thumbnail=None,
+    #         result_json=result,
+    #         risk_level=risk_level,
+    #         user_id=user_id
+    #     )
+    # except Exception as e:
+    #     logger.exception("保存报告入库异常", exc_info=e)
+
     return result
 
 # 多图综合评估接口：一组图片，同房间，返回一份汇总结果
