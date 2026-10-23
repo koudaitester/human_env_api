@@ -9,6 +9,7 @@ import os
 from services.dao.db_pool import get_conn, release_conn
 import re
 from services.prompt_service import get_prompt
+from utils.tools import resize_image_for_llava
 
 # 霉菌知识库标识
 MOLD_KNOWLEDGE_ID = "mold_rules.md"
@@ -53,8 +54,10 @@ class LlamaService:
         # Service：只拉知识库 + 拼接prompt + 调用大模型
         rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
         prompt = get_prompt("mold_vision_extract", rule_text=rule_text)
+        #压缩base64图片
+        # img_b64 = resize_image_for_llava(img_b64, 1000)
 
-        logger.info("prompt: " + prompt)
+        # logger.info("prompt: " + prompt)
         resp = chat(
             model="llava",
             messages=[{
@@ -65,7 +68,9 @@ class LlamaService:
             options={
             "temperature": 0.0,
             "top_p": 0.1,
-            "seed": 42
+            "seed": 42,
+            "max_tokens": 384,
+            "keepalive": "10m"
             }
         )
         logger.info("llava resp: " + str(resp))
