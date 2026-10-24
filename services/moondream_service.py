@@ -85,6 +85,8 @@ class MoondreamService:
         prompt = f"""Observe this indoor image and describe it objectively.
 Only focus on these items: room type, wall condition, ceiling condition, floor condition, water stain, water droplet, mold spot, dirt, furniture, clutter, lighting, ventilation.
 Only output plain text, no json, no table, no list, no markdown.
+
+Important: Carefully distinguish mold from ordinary water stains, tea stains, dirt marks and discoloration. Do not mark ordinary flat stains, discoloration or surface dirt as mold. Mold usually appears as fuzzy, patchy, raised, clustered growth. Only call it mold when you see fuzzy / clustered fungal growth. If you are uncertain, describe it as stain instead of mold.
 """
         logger.info("[MoondreamService] analyze_mold_visual prompt loaded")
         resp = chat(
@@ -132,6 +134,8 @@ Only output plain text, no json, no table, no list, no markdown.
         raw_content = resp["message"]["content"]
         logger.info("moondream raw resp: " + str(resp))
         img_struct = parse_moondream_text(raw_content)
+        # 附加原始归一化文本，用于后置词组判断
+        img_struct["__raw_text__"] = normalize_text(raw_content)
         return {"code": 200, "data": img_struct}
 
 moondream_service = MoondreamService()

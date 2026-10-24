@@ -28,7 +28,7 @@ from typing import List, Tuple
 FEATURE_GROUPS: List[Tuple[List[str], int, str]] = [
     # ========== 病灶类（强权重，核心定级依据） ==========
     (
-        ["深色斑块", "dark patch", "dark spot"],
+        ["深色斑块", "dark patch", "dark spot", "mold"],
         81,
         "墙面识别到深色斑块样痕迹，有可能是霉斑、污渍，此模型只做辅助评估；建议近距离实地观察，触摸辨别，同步控制环境湿度"
     ),
@@ -250,6 +250,8 @@ def extract_features(img_struct: dict) -> List[Dict]:
 
     logger.info(f"[mold_weight] 输入img_struct: {img_struct}")
 
+    # 优先取moondream带过来的完整原始文本，没有再用字段拼接兜底
+    raw_full_text = img_struct.pop("__raw_text__", None)
     # 把所有字段文本拼成一个大文本，统一匹配（避免字段间割裂）
     all_text = ""
     for field_name, field_value in img_struct.items():
@@ -280,8 +282,20 @@ def extract_features(img_struct: dict) -> List[Dict]:
                 break   # 同组只算一次
 
     logger.info(f"[mold_weight] 命中特征: {hit_features}")
+    # ========== 新增软降级规则：基于完整原始文本判断 ==========
+    if raw_full_text is not None:
+        for f in hit_features:
+            if f["name"] != "深色斑块":
+                continue
+            if re.search(r"\ba small amount of mold\b", raw_full_text, re.IGNORECASE):
+                # 连片霉菌，保留81分
+                continue
+            if re.search(r"\b(some mold spots|a small mold spot)\b", raw_full_text, re.IGNORECASE):
+                f["name"] = "水痕印记"
+                f["weight"] = 20
+                f["suggest"] = "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
+                logger.info("[mold_weight][soft_rule] mold spot 降级为普通水渍")
     return hit_features
-
 
 # ============================================================
 # 三、加权计算（纯函数，输入确定 → 输出确定）
@@ -294,14 +308,12 @@ def _humidity_contribution(humidity: float) -> Tuple[int, str]:
             return score, suggest_template.format(rh=humidity)
     return 0, ""
 
-
 def _temperature_contribution(temperature: float) -> Tuple[int, str]:
     """温度加分：落在霉菌适宜区间才加"""
     low, high = TEMP_OPTIMAL_RANGE
     if low <= temperature <= high:
         return TEMP_OPTIMAL_SCORE, TEMP_OPTIMAL_SUGGEST.format(t=temperature)
     return 0, ""
-
 
 def _decide_level(total_score: int) -> Tuple[str, str]:
     """根据总分定级，返回(riskLevel中文, riskClass)"""
@@ -317,7 +329,7 @@ def calc_inducer_cap_score(hit_features: List[dict]) -> tuple[int, int, int]:
     :param hit_features: 经过互斥去重后的命中特征列表
     :return: (lesion_score, inducer_score, benefit_score)
     """
-    LESION_KEYWORDS = {"深色斑块", "点状深色小点", "积水", "起皮", "水痕印记", "水珠"}
+    LESION_KEYWORDS = {"深色斑块", "点状深色小点", "积水", "起皮", "水痕印记", "水珠", "mold"}
     MAX_PURE_INDUCER = 20
 
     lesion_score = 0
