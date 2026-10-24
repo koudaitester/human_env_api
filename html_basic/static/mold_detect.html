@@ -175,27 +175,29 @@
             resultWrap.innerHTML = `<p>轮巡已停止</p>`
         }
 
-        // 截取画面 + 上传调用接口
+        // 修改视频页面里 captureFrameAndDetect
         async function captureFrameAndDetect(){
             canvas.width = videoEl.videoWidth;
             canvas.height = videoEl.videoHeight;
             ctx.drawImage(videoEl, 0,0);
-            // canvas转blob
             const blob = await new Promise(resolve=> canvas.toBlob(resolve, 'image/jpeg',0.8));
             const formData = new FormData();
-            formData.append("file", blob);
+            formData.append("file", blob, "frame.jpg"); // 补上文件名，和上传页一致
 
+            // 视频轮巡优先走纯视觉visual接口；后面如果要叠加温湿度，再切full
+            const url = "http://127.0.0.1:8000/api/v1/mold/visual";
             try{
-                const res = await apiRequest("http://127.0.0.1:8000/api/v1/mold/visual",{
+                const res = await apiRequest(url,{
                     method:"POST",
                     body:formData
                 })
                 const apiResp = await res.json();
+                console.log("帧结果：", apiResp);
                 if(apiResp.code !==200){
                     resultWrap.innerHTML = `<p style="color:red;">接口异常 code:${apiResp.code}</p>`
                     return;
                 }
-                const data = JSON.parse(apiResp.data);
+                const data = apiResp.data;
                 resultWrap.innerHTML = `
                     <span class="risk-tag ${data.riskClass}">${data.riskLevel}</span>
                     <div class="result-block">
@@ -206,9 +208,10 @@
                     </div>
                 `
             }catch(err){
+                console.error(err);
                 resultWrap.innerHTML = `<p style="color:red;">轮巡调用失败，继续等待下一帧</p>`
             }
         }
-    </script>
+</script>
 </body>
 </html>

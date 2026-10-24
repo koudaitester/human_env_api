@@ -36,12 +36,12 @@ async def mold_visual(
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
     logger.info("霉菌检测视觉分析接口调用")
     # 调用实例方法
-    result = await llama_service.analyze_mold_visual(img_b64)
-    raw = re.sub(r'```(json)?', '', result["data"]).strip()
+    result = await moondream_service.analyze_mold_visual(img_b64)
+    # raw = re.sub(r'```(json)?', '', result["data"]).strip()
     # result["data"] = raw
     logger.info(f"霉菌检测视觉分析结果: {result}")
     #调用calc_mold_weight判断环境风险、建议
-    img_struct = raw
+    img_struct = result["data"]
     weight_result = calc_mold_weight_result(img_struct)
     logger.info(f"霉菌检测视觉分析加权结果: {weight_result}")
     result["data"] = weight_result

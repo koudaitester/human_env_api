@@ -34,7 +34,7 @@ FEATURE_GROUPS: List[Tuple[List[str], int, str]] = [
     ),
 
     (
-        ["积水", "地面积水", "standing water", "pooled water", "floor water", "water floor"],
+        ["积水", "地面积水", "standing water", "pooled water", "water on the floor"],
         30,
         "地面存在积水，及时擦干，保持地面干燥"
     ),
@@ -46,10 +46,16 @@ FEATURE_GROUPS: List[Tuple[List[str], int, str]] = [
     ),
 
     (
-        ["水痕印记", "水渍", "water stain", "water mark", "stain"],
-        20,
-        "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
+        ["dirt", "dirty"],
+        10, "墙面/角落存在积尘脏污，积尘在高湿环境易滋生霉菌孢子，建议及时清洁，控制环境湿度"
+        
     ),
+
+    # (
+    #     ["水痕印记", "水渍", "water stain", "water mark"],
+    #     20,
+    #     "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
+    # ),
 
     (
         ["水珠", "冷凝水", "结露", "water droplet", "condensation"],
@@ -295,6 +301,17 @@ def extract_features(img_struct: dict) -> List[Dict]:
                 f["weight"] = 20
                 f["suggest"] = "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
                 logger.info("[mold_weight][soft_rule] mold spot 降级为普通水渍")
+    # 水渍识别，从raw原文匹配连续词组
+    if raw_full_text is not None:
+        if re.search(r"\b(water stain|water mark)\b", raw_full_text, re.IGNORECASE):
+            logger.info("[mold_weight][soft_rule] 识别到水渍描述 water stain / water mark")
+            hit_features.append({
+                "name": "水痕印记",
+                "matched_keyword": "water stain",
+                "weight": 20,
+                "suggest": "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
+            })
+
     return hit_features
 
 # ============================================================

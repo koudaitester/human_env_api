@@ -87,6 +87,8 @@ Only focus on these items: room type, wall condition, ceiling condition, floor c
 Only output plain text, no json, no table, no list, no markdown.
 
 Important: Carefully distinguish mold from ordinary water stains, tea stains, dirt marks and discoloration. Do not mark ordinary flat stains, discoloration or surface dirt as mold. Mold usually appears as fuzzy, patchy, raised, clustered growth. Only call it mold when you see fuzzy / clustered fungal growth. If you are uncertain, describe it as stain instead of mold.
+
+Do not invent marks, stains or discoloration that you cannot clearly see. If you are uncertain whether there is a water stain, do not mention "water stain". Describe only clearly visible features.
 """
         logger.info("[MoondreamService] analyze_mold_visual prompt loaded")
         resp = chat(
@@ -97,16 +99,18 @@ Important: Carefully distinguish mold from ordinary water stains, tea stains, di
                 "images": [img_b64]
             }],
             options={
-                "temperature": 0.0,
+                "temperature": 0.1,
                 "top_p": 0.1,
                 "seed": 42,
-                "max_tokens": 384,
+                "max_tokens": 512,
                 "keepalive": "10m"
             }
         )
         logger.info("moondream raw resp: " + str(resp))
         raw_content = resp["message"]["content"]
         img_struct = parse_moondream_text(raw_content)
+        # 附加原始归一化文本，用于后置词组判断
+        img_struct["__raw_text__"] = normalize_text(raw_content)
         return {"code": 200, "data": img_struct}
 
     # 和LLaVA对齐：analyze_mold_full
@@ -114,6 +118,10 @@ Important: Carefully distinguish mold from ordinary water stains, tea stains, di
         prompt = """Observe this indoor image and describe it objectively.
 Only focus on these items: room type, wall condition, ceiling condition, floor condition, water stain, water droplet, mold spot, dirt, furniture, clutter, lighting, ventilation.
 Only output plain text, no json, no table, no list, no markdown.
+
+Important: Carefully distinguish mold from ordinary water stains, tea stains, dirt marks and discoloration. Do not mark ordinary flat stains, discoloration or surface dirt as mold. Mold usually appears as fuzzy, patchy, raised, clustered growth. Only call it mold when you see fuzzy / clustered fungal growth. If you are uncertain, describe it as stain instead of mold.
+
+Do not invent marks, stains or discoloration that you cannot clearly see. If you are uncertain whether there is a water stain, do not mention "water stain". Describe only clearly visible features.
 """
         logger.info("[MoondreamService] analyze_mold_full prompt loaded")
         resp = chat(

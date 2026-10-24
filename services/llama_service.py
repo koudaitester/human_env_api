@@ -53,8 +53,8 @@ class LlamaService:
     # ========== 移入类内 ==========
     async def analyze_mold_visual(self, img_b64: str):
         # Service：只拉知识库 + 拼接prompt + 调用大模型
-        rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
-        prompt = get_prompt("mold_vision_extract_llava", rule_text=rule_text)
+        # rule_text = await get_rag_knowledge(MOLD_KNOWLEDGE_ID)
+        prompt = get_prompt("mold_vision_extract_llava")
         #压缩base64图片
         # img_b64 = resize_image_for_llava(img_b64, 1000)
 
