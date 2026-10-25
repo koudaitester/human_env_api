@@ -6,6 +6,7 @@
 2. 结构化：规则分组 → 特征提取 → 加权 → 定级 → 输出，每层独立可测
 3. 同义词归组：LLaVA 措辞漂移时，只要命中组内任一词，就算同一条风险
 """
+from asyncio import log
 from typing import Dict, List, Tuple
 from services.log_service import logger
 import re
@@ -51,11 +52,11 @@ FEATURE_GROUPS: List[Tuple[List[str], int, str]] = [
         
     ),
 
-    # (
-    #     ["水痕印记", "水渍", "water stain", "water mark"],
-    #     20,
-    #     "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
-    # ),
+    (
+        ["水痕印记", "水渍", "water stain", "water mark", "stain"],
+        20,
+        "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
+    ),
 
     (
         ["水珠", "冷凝水", "结露", "water droplet", "condensation"],
@@ -293,10 +294,12 @@ def extract_features(img_struct: dict) -> List[Dict]:
         for f in hit_features:
             if f["name"] != "深色斑块":
                 continue
-            if re.search(r"\ba small amount of mold\b", raw_full_text, re.IGNORECASE):
+            if re.search(r"\b(a small amount of mold|a small mold spot)\b", raw_full_text, re.IGNORECASE):
+                logger.info("[mold_weight][soft_rule] 识别到水渍描述 a small amount of mold / a small mold spot")
                 # 连片霉菌，保留81分
                 continue
-            if re.search(r"\b(some mold spots|a small mold spot)\b", raw_full_text, re.IGNORECASE):
+            if re.search(r"\b(some mold spots|some appearing to be mold)\b", raw_full_text, re.IGNORECASE):
+                logger.info("[mold_weight][soft_rule] 识别到水渍描述 some mold spots")
                 f["name"] = "水痕印记"
                 f["weight"] = 20
                 f["suggest"] = "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"

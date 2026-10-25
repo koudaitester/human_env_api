@@ -147,6 +147,19 @@
             padding: 2px 6px;
             border-radius: 4px;
         }
+        @media (max-width:768px){
+            body {
+                padding: 12px;
+                font-size: 16px;
+                margin:0;
+            }
+            input, button {
+                width: 100%;
+                margin: 6px 0;
+                font-size: 16px;
+                padding:10px;
+            }
+        }
 
     </style>
 </head>
@@ -239,10 +252,10 @@
             const tempVal = tempInput.value.trim();
             const humidity = humidityInput.value.trim();
 
-            let url = "http://127.0.0.1:8000/api/v1/mold/visual";
+            let url = "/api/v1/mold/visual";
             if(tempVal && humidity){
                 console.log("启用联合评估接口，温度:", tempVal, "湿度:", humidity);
-                url = `http://127.0.0.1:8000/api/v1/mold/full?temperature=${tempVal}&humidity=${humidity}`;
+                url = `/api/v1/mold/full?temperature=${tempVal}&humidity=${humidity}`;
             }
 
             try {

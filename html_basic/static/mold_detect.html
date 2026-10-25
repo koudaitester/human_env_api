@@ -77,14 +77,34 @@
         .risk-low {
             background: #38a169;
         }
-        .risk-warn {
+        .risk-primary {
             background: #d69e2e;
         }
-        .risk-mid {
+        .risk-medium {
             background: #dd6b20;
         }
         .risk-high {
             background: #c53030;
+        }
+        .grid-two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .env-input {
+            margin-top: 20px;
+        }
+        .env-input h3 {
+            color: #2d3748;
+            font-size: 16px;
+        }
+        input.env-field {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
         }
         .result-block h3 {
             color: #2d3748;
@@ -99,6 +119,25 @@
             color: #718096;
             font-size: 14px;
         }
+        .tip-small {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 8px;
+        }
+        @media (max-width:768px){
+            body {
+                padding: 12px;
+                font-size: 16px;
+                margin:0;
+            }
+            input, button {
+                width: 100%;
+                margin: 6px 0;
+                font-size: 16px;
+                padding:10px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -110,8 +149,24 @@
         <div class="row">
             <!-- 左侧视频预览 + 控制按钮 -->
             <div class="card">
+                <!-- 视频采集 -->
                 <div class="video-area">
                     <video id="video-preview" autoplay playsinline muted></video>
+                </div>
+                <!-- 温度湿度输入框 -->
+                <div class="env-input">
+                    <h3>环境参数（可选）</h3>
+                    <div class="grid-two">
+                        <div>
+                            <label>温度 ℃</label>
+                            <input class="env-field" id="temp-input" type="number" step="0.1" placeholder="例：23">
+                        </div>
+                        <div>
+                            <label>相对湿度 RH %</label>
+                            <input class="env-field" id="rh-input" type="number" step="1" placeholder="例：50">
+                        </div>
+                    </div>
+                    <p class="tip-small">两项全部填写，启用图像+温湿度联合评估；留空仅图像分析</p>
                 </div>
                 <button id="start-btn">启动轮巡检测</button>
                 <button id="stop-btn" disabled>停止轮巡检测</button>
@@ -133,6 +188,8 @@
         const startBtn = document.getElementById('start-btn');
         const stopBtn = document.getElementById('stop-btn');
         const resultWrap = document.getElementById('result-wrap');
+        const tempInput = document.getElementById('temp-input');
+        const humidityInput = document.getElementById('rh-input');
 
         let mediaStream = null;
         let timerId = null;
@@ -183,9 +240,14 @@
             const blob = await new Promise(resolve=> canvas.toBlob(resolve, 'image/jpeg',0.8));
             const formData = new FormData();
             formData.append("file", blob, "frame.jpg"); // 补上文件名，和上传页一致
+            const tempVal = tempInput.value.trim();
+            const humVal = humidityInput.value.trim();
 
             // 视频轮巡优先走纯视觉visual接口；后面如果要叠加温湿度，再切full
-            const url = "http://127.0.0.1:8000/api/v1/mold/visual";
+            let url = "http://127.0.0.1:8000/api/v1/mold/visual";
+            if(tempVal && humVal){
+                url = `http://127.0.0.1:8000/api/v1/mold/full?temperature=${tempVal}&humidity=${humVal}`;
+            }
             try{
                 const res = await apiRequest(url,{
                     method:"POST",
