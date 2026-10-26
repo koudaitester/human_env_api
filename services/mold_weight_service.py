@@ -24,167 +24,108 @@ import re
 
 from typing import List, Tuple
 
-# 风险因子规则组：(同义词列表, 权重分, 命中后建议文案)
-# 同义词列表里任一词被命中（不区分大小写），即视为命中该因子
-FEATURE_GROUPS: List[Tuple[List[str], int, str]] = [
-    # ========== 病灶类（强权重，核心定级依据） ==========
-    (
-        ["深色斑块", "dark patch", "dark spot", "mold"],
-        81,
-        "墙面识别到深色斑块样痕迹，有可能是霉斑、污渍，此模型只做辅助评估；建议近距离实地观察，触摸辨别，同步控制环境湿度"
-    ),
+# 特征关键词
+def parse_feature_groups(rule_text: str):
+    groups: List[Tuple[List[str], int, str]] = []
+    mutex_groups: List[dict] = []
+    negation_words: List[str] = []
+    humidity_rules: List[str] = []
+    temp_config = {"low":18.0, "high":28.0, "score":5, "template":""}
+    level_rules = []
+    soft_downgrade_rules: List[Tuple[str, str, str, int, str]] = []
+    soft_append_rules: List[Tuple[str, str, int, str]] = []
 
-    (
-        ["积水", "地面积水", "standing water", "pooled water", "water on the floor"],
-        30,
-        "地面存在积水，及时擦干，保持地面干燥"
-    ),
+    lines = [line.strip() for line in rule_text.splitlines() if line.strip()]
+    section = None
+    for line in lines:
+        if line.startswith("# "):
+            section = line[2:].strip()
+            continue
+        if section == "FEATURE_GROUPS":
+            parts = line.split("||")
+            if len(parts) != 3:
+                continue
+            kw_list = [w.strip() for w in parts[0].split(",") if w.strip()]
+            score = int(parts[1].strip())
+            suggest = parts[2].strip()
+            groups.append((kw_list, score, suggest))
+        elif section == "MUTEX_GROUPS":
+            parts = line.split("||")
+            if len(parts) != 2:
+                continue
+            import ast
+            try:
+                key_list = ast.literal_eval(parts[0])
+                desc = parts[1].strip()
+                mutex_groups.append({"keys": key_list, "desc": desc})
+            except Exception as e:
+                logger.warning(f"解析互斥组失败 line={line}, err={e}")
+        elif section == "NEGATION_WORDS":
+            negation_words = [w.strip() for w in line.split(",") if w.strip()]
+        elif section == "HUMIDITY_RULES":
+            parts = line.split("||")
+            if len(parts) != 3:
+                continue
+            try:
+                th = float(parts[0].strip())
+                sc = int(parts[1].strip())
+                tp = parts[2].strip()
+                humidity_rules.append((th, sc, tp))
+            except Exception as e:
+                logger.warning(f"解析湿度规则失败 line={line}, err={e}")
+        elif section == "TEMP_CONFIG":
+            parts = line.split("||")
+            if len(parts) != 3:
+                continue
+            try:
+                range_str = parts[0].strip()
+                low, high = [float(x) for x in range_str.split(",")]
+                sc = int(parts[1].strip())
+                tp = parts[2].strip()
+                temp_config["low"] = low
+                temp_config["high"] = high
+                temp_config["score"] = sc
+                temp_config["template"] = tp
+            except Exception as e:
+                logger.warning(f"解析温度配置失败 line={line}, err={e}")
+        elif section == "LEVEL_RULES":
+            parts = line.split("||")
+            if len(parts) != 3:
+                continue
+            try:
+                th = int(parts[0].strip())
+                lv = parts[1].strip()
+                cls = parts[2].strip()
+                level_rules.append((th, lv, cls))
+            except Exception as e:
+                logger.warning(f"解析定级规则失败 line={line}, err={e}")
+        elif section == "SOFT_DOWNGRADE_RULES":
+            parts = line.split("||")
+            if len(parts) !=5:
+                continue
+            try:
+                pat_raw = parts[0].strip()
+                action = parts[1].strip()
+                t_name = parts[2].strip()
+                sc = int(parts[3].strip())
+                msg = parts[4].strip()
+                soft_downgrade_rules.append((pat_raw, action, t_name, sc, msg))
+            except Exception as e:
+                logger.warning(f"解析降级软规则失败 line={line}, err={e}")
+        elif section == "SOFT_APPEND_FEATURE_RULES":
+            parts = line.split("||")
+            if len(parts) !=4:
+                continue
+            try:
+                pat_raw = parts[0].strip()
+                t_name = parts[1].strip()
+                sc = int(parts[2].strip())
+                msg = parts[3].strip()
+                soft_append_rules.append((pat_raw, t_name, sc, msg))
+            except Exception as e:
+                logger.warning(f"解析追加软规则失败 line={line}, err={e}")
 
-    (
-        ["起皮", "鼓包", "墙皮脱落", "peeling", "bulging"],
-        25,
-        "墙皮起皮鼓包，大概率受潮，建议检查墙体内部渗水"
-    ),
-
-    (
-        ["dirt", "dirty"],
-        10, "墙面/角落存在积尘脏污，积尘在高湿环境易滋生霉菌孢子，建议及时清洁，控制环境湿度"
-        
-    ),
-
-    (
-        ["水痕印记", "水渍", "water stain", "water mark", "stain"],
-        20,
-        "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
-    ),
-
-    (
-        ["水珠", "冷凝水", "结露", "water droplet", "condensation"],
-        12,
-        "观察到冷凝水珠，加强通风，降低室内湿度"
-    ),
-
-    # ========== 诱因类（弱权重，只做加分，无病灶时封顶20） ==========
-    (
-        ["紧贴墙面", "紧靠墙面", "贴墙摆放", "靠墙", "against wall"],
-        6,
-        "家具/杂物紧贴墙面摆放，建议预留空隙，减少受潮发霉风险"
-    ),
-
-    (
-        ["纸箱", "硬纸箱", "纸箱子", "cardboard box"],
-        6,
-        "室内堆放易吸潮纸箱，建议远离墙面并定期清理"
-    ),
-
-    (
-        ["被子", "被褥", "厚床品", "bedding"],
-        5,
-        "厚床品容易蓄积潮气，建议定期晾晒"
-    ),
-
-    (
-        ["布艺沙发", "布艺家具", "布艺窗帘", "fabric sofa", "fabric curtain"],
-        5,
-        "布艺织物容易吸附潮气，定期通风晾晒"
-    ),
-
-    (
-        ["地毯", "地垫", "carpet", "rug"],
-        7,
-        "地毯容易蓄积潮气，定期吸尘干燥"
-    ),
-
-    (
-        ["昏暗", "光线差", "采光不足", "采光昏暗", "dim", "dark"],
-        5,
-        "区域采光昏暗，紫外线不足，不利于抑制霉菌"
-    ),
-
-    (
-        ["盆栽", "绿植", "花盆", "plant", "potted plant"],
-        4,
-        "盆栽浇水容易增加局部湿度，尽量远离墙体"
-    ),
-
-    (
-        ["浮尘", "灰尘", "积灰", "dust"],
-        3,
-        "表面积灰，灰尘容易附着潮气，定期清洁"
-    ),
-
-    (
-        ["蛛网", "蜘蛛网", "cobweb"],
-        3,
-        "角落存在蛛网，建议清洁，保持环境干燥"
-    ),
-
-    (
-        ["关闭", "关窗", "窗户紧闭", "window closed"],
-        5,
-        "窗户处于关闭状态，建议每日定时开窗通风换气"
-    ),
-
-    (
-        ["密闭", "不通风", "空气不流通", "poor ventilation"],
-        5,
-        "空间相对密闭，建议增加通风频次"
-    ),
-
-    # ========== 有利减分项 ==========
-    (
-        ["排风", "排风扇", "排气扇", "exhaust fan"],
-        -8,
-        "空间配有排风设备，合理开启可以降低潮湿风险"
-    ),
-    (
-        ["除湿机", "除湿设备", "dehumidifier"],
-        -12,
-        "现场配有除湿设备，合理使用能够抑制霉菌滋生"
-    ),
-]
-
-# 否定词：关键词前面紧贴这些词，视为否定，不命中
-NEGATION_WORDS = ["没有", "无", "未见", "未发现", "不存在", "无明显", "无可见", "没有可见"]
-
-# 互斥分组配置
-MUTEX_GROUPS = [
-    {"keys": ["点状深色小点", "深色斑块", "dark patch", "dark spot"], "desc": "深色痕迹同源互斥"},
-    {"keys": ["水痕印记", "水渍印记", "water stain", "water mark"], "desc": "水痕同源互斥"},
-]
-
-# 温湿度阈值（和 mode_rules.md 对齐）
-HUMIDITY_RULES: List[Tuple[float, int, str]] = [
-    # (阈值, 权重, 建议)
-    (75, 30, "当前相对湿度{rh}%≥75%，极易滋生霉菌，优先除湿"),
-    (65, 20, "当前相对湿度{rh}%处于霉菌快速繁殖区间，建议除湿至65%以下"),
-    (55, 10, "当前相对湿度{rh}%已达霉菌萌发阈值，注意通风控湿"),
-]
-
-# 温度区间加分：18~28℃ 是霉菌最适繁殖温度
-TEMP_OPTIMAL_RANGE = (18, 28)
-TEMP_OPTIMAL_SCORE = 5
-TEMP_OPTIMAL_SUGGEST = "当前温度{t}℃落在霉菌适宜繁殖区间，需配合湿度重点防控"
-
-# 定级阈值
-LEVEL_RULES: List[Tuple[int, str, str]] = [
-    # (分数下限, riskLevel中文, riskClass css类)
-    (81, "高风险", "risk-high"),
-    (41, "中风险", "risk-medium"),
-    (21, "初级风险", "risk-primary"),
-    (0,  "低风险", "risk-low"),
-]
-
-
-# ============================================================
-# 二、特征提取（LLaVA 文本 → 结构化命中列表）
-# ============================================================
-
-# 无效文本黑名单（LLaVA 偶尔吐出 prompt 碎片，直接过滤）
-JUNK_PHRASES = [
-    "玻璃洁净度", "采光通风", "墙面材质", "空间类型", "家具摆放",
-    "床品情况", "顶面状态", "地面材质", "潮湿痕迹", "整体干净度",
-]
+    return groups, mutex_groups, negation_words, humidity_rules, temp_config, level_rules, soft_downgrade_rules, soft_append_rules
 
 def resolve_mutex_features(hit_features: list[dict], mutex_groups: list[dict]) -> list[dict]:
     """
@@ -208,7 +149,7 @@ def resolve_mutex_features(hit_features: list[dict], mutex_groups: list[dict]) -
         logger.info(f"[mold_weight][mutex] {group['desc']}, 保留特征: {keep_item['name']} weight={keep_item['weight']}")
     return result
 
-def _is_negated(text: str, kw: str) -> bool:
+def _is_negated(text: str, kw: str, negation_words: List) -> bool:
     kw_lower = kw.lower()
     sentences = re.split(r"[，。；]", text)
     # 预清洗分句：去空白
@@ -226,7 +167,7 @@ def _is_negated(text: str, kw: str) -> bool:
                 return True
 
         # 规则1：当前分句内就同时有否定词
-        for neg in NEGATION_WORDS:
+        for neg in negation_words:
             if neg in sent_lower:
                 # 是否问句里实体白名单保留
                 if "是否" in sent_lower:
@@ -243,7 +184,7 @@ def _normalize_text(text: str) -> str:
     """文本归一化：去空白、统一小写，避免大小写/全半角问题"""
     return str(text).strip().lower()
 
-def extract_features(img_struct: dict) -> List[Dict]:
+def extract_features(img_struct: dict, feature_group: List, negation_words: List, soft_downgrade_raw: List, soft_append_raw: List) -> List[Dict]:
     """
     输入：LLaVA 输出的结构化 dict
     输出：命中的特征列表
@@ -274,10 +215,10 @@ def extract_features(img_struct: dict) -> List[Dict]:
 
     # 遍历规则组，组内任一关键词命中即记录
     hit_features = []
-    for keywords, weight, suggest in FEATURE_GROUPS:
+    for keywords, weight, suggest in feature_group:
         for kw in keywords:
             if kw.lower() in all_text:
-                if _is_negated(all_text, kw):
+                if _is_negated(all_text, kw, negation_words):
                     logger.info(f"[mold_weight] 关键词 {kw} 被否定词否定，忽略")
                     continue
                 hit_features.append({
@@ -289,31 +230,48 @@ def extract_features(img_struct: dict) -> List[Dict]:
                 break   # 同组只算一次
 
     logger.info(f"[mold_weight] 命中特征: {hit_features}")
-    # ========== 新增软降级规则：基于完整原始文本判断 ==========
+    # ========== 软降级：编译正则，替换原来写死的if-re 块 ==========
+    # 编译降级规则
+    downgrade_compiled = []
+    for pat_str, action, t_name, sc, msg in soft_downgrade_raw:
+        try:
+            downgrade_compiled.append((re.compile(pat_str, re.IGNORECASE), action, t_name, sc, msg))
+        except Exception as e:
+            logger.warning(f"软降级正则编译失败 {pat_str}: {e}")
+    # 编译追加规则
+    append_compiled = []
+    for pat_str, t_name, sc, msg in soft_append_raw:
+        try:
+            append_compiled.append((re.compile(pat_str, re.IGNORECASE), t_name, sc, msg))
+        except Exception as e:
+            logger.warning(f"追加正则编译失败 {pat_str}: {e}")
+
     if raw_full_text is not None:
         for f in hit_features:
             if f["name"] != "深色斑块":
                 continue
-            if re.search(r"\b(a small amount of mold|a small mold spot)\b", raw_full_text, re.IGNORECASE):
-                logger.info("[mold_weight][soft_rule] 识别到水渍描述 a small amount of mold / a small mold spot")
-                # 连片霉菌，保留81分
-                continue
-            if re.search(r"\b(some mold spots|some appearing to be mold)\b", raw_full_text, re.IGNORECASE):
-                logger.info("[mold_weight][soft_rule] 识别到水渍描述 some mold spots")
-                f["name"] = "水痕印记"
-                f["weight"] = 20
-                f["suggest"] = "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
-                logger.info("[mold_weight][soft_rule] mold spot 降级为普通水渍")
-    # 水渍识别，从raw原文匹配连续词组
-    if raw_full_text is not None:
-        if re.search(r"\b(water stain|water mark)\b", raw_full_text, re.IGNORECASE):
-            logger.info("[mold_weight][soft_rule] 识别到水渍描述 water stain / water mark")
-            hit_features.append({
-                "name": "水痕印记",
-                "matched_keyword": "water stain",
-                "weight": 20,
-                "suggest": "墙面存在水痕印记/地面水渍，排查渗水源并持续观察"
-            })
+            for pat, action, t_name, sc, msg in downgrade_compiled:
+                if pat.search(raw_full_text):
+                    if action == "keep":
+                        logger.info(f"[mold_weight][soft_rule] 识别到描述 {pat.pattern}，保留原有高分")
+                        continue
+                    elif action == "convert":
+                        logger.info(f"[mold_weight][soft_rule] 识别到描述 {pat.pattern}")
+                        f["name"] = t_name
+                        f["weight"] = sc
+                        f["suggest"] = msg
+                        logger.info("[mold_weight][soft_rule] mold spot 降级为普通水渍")
+                    break
+        # 追加 water stain / water mark 特征
+        for pat, t_name, sc, msg in append_compiled:
+            if pat.search(raw_full_text):
+                logger.info(f"[mold_weight][soft_rule] 识别到水渍描述 {pat.pattern}")
+                hit_features.append({
+                    "name": t_name,
+                    "matched_keyword": pat.pattern,
+                    "weight": sc,
+                    "suggest": msg
+                })
 
     return hit_features
 
@@ -321,23 +279,23 @@ def extract_features(img_struct: dict) -> List[Dict]:
 # 三、加权计算（纯函数，输入确定 → 输出确定）
 # ============================================================
 
-def _humidity_contribution(humidity: float) -> Tuple[int, str]:
+def _humidity_contribution(humidity: float, humidity_rules: List) -> Tuple[int, str]:
     """湿度加分，返回(分, 建议)"""
-    for threshold, score, suggest_template in HUMIDITY_RULES:
+    for threshold, score, suggest_template in humidity_rules:
         if humidity >= threshold:
             return score, suggest_template.format(rh=humidity)
     return 0, ""
 
-def _temperature_contribution(temperature: float) -> Tuple[int, str]:
+def _temperature_contribution(temperature: float, temp_config: List) -> Tuple[int, str]:
     """温度加分：落在霉菌适宜区间才加"""
-    low, high = TEMP_OPTIMAL_RANGE
+    low, high = (temp_config["low"], temp_config["high"])
     if low <= temperature <= high:
-        return TEMP_OPTIMAL_SCORE, TEMP_OPTIMAL_SUGGEST.format(t=temperature)
+        return temp_config["score"], temp_config["template"].format(t=temperature)
     return 0, ""
 
-def _decide_level(total_score: int) -> Tuple[str, str]:
+def _decide_level(total_score: int, level_rules: List) -> Tuple[str, str]:
     """根据总分定级，返回(riskLevel中文, riskClass)"""
-    for threshold, level, cls in LEVEL_RULES:
+    for threshold, level, cls in level_rules:
         if total_score >= threshold:
             return level, cls
     return "低风险", "risk-low"
@@ -383,6 +341,7 @@ def calc_mold_weight_result(
     img_struct: dict,
     temperature: float | None = None,
     humidity: float | None = None,
+    rule_text: str = ""
 ) -> dict:
     """
     输入：
@@ -392,8 +351,23 @@ def calc_mold_weight_result(
     输出：
       {riskLevel, riskClass, desc, suggest, extraNote}
     """
+
+    FEATURE_GROUPS = []
+    MUTEX_GROUPS = []
+    NEGATION_WORDS  = []
+    HUMIDITY_RULES = []
+    LEVEL_RULES = []
+    SOFT_DOWNGRADE_RAW = []
+    SOFT_APPEND_RAW = []
+
+    if rule_text.strip():
+        logger.info("命中features知识库策略： " + rule_text)
+        FEATURE_GROUPS, MUTEX_GROUPS, NEGATION_WORDS, HUMIDITY_RULES, TEMP_CONFIG, LEVEL_RULES, SOFT_DOWNGRADE_RAW, SOFT_APPEND_RAW = parse_feature_groups(rule_text)
+    else:
+        logger.info("未命中features知识库策略")
+
     # 1. 图像特征命中
-    features = extract_features(img_struct)
+    features = extract_features(img_struct, FEATURE_GROUPS, NEGATION_WORDS, SOFT_DOWNGRADE_RAW, SOFT_APPEND_RAW)
     # 互斥组去重
     features = resolve_mutex_features(features, MUTEX_GROUPS)
 
@@ -409,7 +383,7 @@ def calc_mold_weight_result(
     # 2. 湿度贡献（有值才算）
     if humidity is not None:
         logger.info("湿度贡献命中") # type: ignore
-        h_score, h_suggest = _humidity_contribution(humidity)
+        h_score, h_suggest = _humidity_contribution(humidity, HUMIDITY_RULES)
         total_score += h_score
         if h_score:
             suggestions.append({"weight": h_score, "text": h_suggest})
@@ -417,13 +391,13 @@ def calc_mold_weight_result(
     # 3. 温度贡献（有值才算）
     if temperature is not None:
         logger.info("温度贡献命中")
-        t_score, t_suggest = _temperature_contribution(temperature)
+        t_score, t_suggest = _temperature_contribution(temperature, TEMP_CONFIG)
         total_score += t_score
         if t_score:
             suggestions.append({"weight": t_score, "text": t_suggest})
 
     # 4. 定级&score上线100
-    level, cls = _decide_level(total_score)
+    level, cls = _decide_level(total_score, LEVEL_RULES)
     total_score = min(total_score, 100)
 
     # 5. 建议按权重降序排序

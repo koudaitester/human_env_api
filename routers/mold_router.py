@@ -9,6 +9,7 @@ import re
 from services.report_service import save_report
 import json
 from typing import Annotated
+from utils import rag_helper
 from utils.deps import get_current_user
 from utils.validator import validate_range
 from services.mold_weight_service import calc_mold_weight_result
@@ -37,12 +38,12 @@ async def mold_visual(
     logger.info("霉菌检测视觉分析接口调用")
     # 调用实例方法
     result = await moondream_service.analyze_mold_visual(img_b64)
-    # raw = re.sub(r'```(json)?', '', result["data"]).strip()
-    # result["data"] = raw
     logger.info(f"霉菌检测视觉分析结果: {result}")
     #调用calc_mold_weight判断环境风险、建议
     img_struct = result["data"]
-    weight_result = calc_mold_weight_result(img_struct)
+    #调用知识库
+    rule_txt = await rag_helper.get_rag_knowledge("mold_risk_calc.md")
+    weight_result = calc_mold_weight_result(img_struct, None, None, rule_txt)
     logger.info(f"霉菌检测视觉分析加权结果: {weight_result}")
     result["data"] = weight_result
     return result
@@ -69,19 +70,18 @@ async def mold_full(
 
     img_bytes = await file.read()
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-    # user_id = current_user["id"]
-    # result = await llama_service.analyze_mold_full(img_b64)
     result = await moondream_service.analyze_mold_full(img_b64, temperature, humidity)
     logger.info(f"霉菌检测全参数分析结果: {result}")
-    # raw = re.sub(r'```(json)?', '', result["data"]).strip()
-    # logger.info(f"霉菌检测全参数分析原始结果: {raw}")
 
     #调用calc_mold_weight判断环境风险、建议
     img_struct = result["data"]
-    weight_result = calc_mold_weight_result(img_struct, temperature, humidity)
+    #调用知识库
+    rule_txt = await rag_helper.get_rag_knowledge("mold_risk_calc.md")
+    weight_result = calc_mold_weight_result(img_struct, temperature, humidity, rule_txt)
     logger.info(f"霉菌检测视觉分析加权结果: {weight_result}")
     result["data"] = weight_result
 
+    #保存报告
     # try:
     #     data_dict = json.loads(raw)
     # except json.JSONDecodeError:

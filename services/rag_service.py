@@ -13,3 +13,5 @@ class RagService(BaseService):
         except Exception as e:
             logger.error("知识库检索异常：", e)
             return BaseService.fail(f"知识库检索异常:{str(e)}")
+
+rag_service = RagService()

@@ -2,6 +2,28 @@ from typing import Dict
 
 
 PROMPT_TEMPLATES: Dict[str, str] = {
+
+    "moondream_visual": """
+    Observe this indoor image and describe it objectively.
+Only focus on these items: room type, wall condition, ceiling condition, floor condition, water stain, water droplet, mold spot, dirt, furniture, clutter, lighting, ventilation.
+Only output plain text, no json, no table, no list, no markdown.
+
+Important: Carefully distinguish mold from ordinary water stains, tea stains, dirt marks and discoloration. Do not mark ordinary flat stains, discoloration or surface dirt as mold. Mold usually appears as fuzzy, patchy, raised, clustered growth. Only call it mold when you see fuzzy / clustered fungal growth.
+
+Do NOT mistake shadow, light reflection, tile gloss, edge shadow of window and wall for water stain or water droplet. If you cannot clearly confirm there is a water stain or water droplet, state that there are no water stains or water droplets. Do not invent objects that do not exist in the picture.
+  """
+,
+
+    "moondream_full": """
+    Observe this indoor image and describe it objectively.
+Only focus on these items: room type, wall condition, ceiling condition, floor condition, water stain, water droplet, mold spot, dirt, furniture, clutter, lighting, ventilation.
+Only output plain text, no json, no table, no list, no markdown.
+
+Important: Carefully distinguish mold from ordinary water stains, tea stains, dirt marks and discoloration. Do not mark ordinary flat stains, discoloration or surface dirt as mold. Mold usually appears as fuzzy, patchy, raised, clustered growth. Only call it mold when you see fuzzy / clustered fungal growth. If you are uncertain, describe it as stain instead of mold.
+
+Do not invent marks, stains or discoloration that you cannot clearly see. If you are uncertain whether there is a water stain, do not mention "water stain". Describe only clearly visible features.
+    """
+,
     # 温湿度RAG检索规则：文本LLM专用，接收温湿度参数，输出RAG检索规则
     "mold_temp_hum_rag_rules": """
     你是室内人居环境图像观察助手。只客观描述图片里能肉眼看到的内容，不要做风险判断，不要推测看不见的内部情况，不要给出任何建议。
