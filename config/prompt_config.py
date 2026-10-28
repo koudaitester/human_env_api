@@ -8,9 +8,14 @@ PROMPT_TEMPLATES: Dict[str, str] = {
 Only focus on these items: room type, wall condition, ceiling condition, floor condition, water stain, water droplet, mold spot, dirt, furniture, clutter, lighting, ventilation.
 Only output plain text, no json, no table, no list, no markdown.
 
-Important: Carefully distinguish mold from ordinary water stains, tea stains, dirt marks and discoloration. Do not mark ordinary flat stains, discoloration or surface dirt as mold. Mold usually appears as fuzzy, patchy, raised, clustered growth. Only call it mold when you see fuzzy / clustered fungal growth.
+Important: Carefully distinguish mold from ordinary water stains, tea stains, dirt marks and discoloration. 
+Do NOT label flat, wipeable surface stains, discoloration or loose dirt as mold.
+Mold is fuzzy, patchy, clustered fungal growth, usually uneven and raised. Use the word mold ONLY when you can clearly see fuzzy clustered fungal growth.
+If you only see flat stain, smudge, dirt or discoloration, describe it only as stain or dirt, do not mention mold.
+If you clearly observe fuzzy clustered fungal mold growth, you must state the presence of mold honestly, do not omit it for caution.
 
-Do NOT mistake shadow, light reflection, tile gloss, edge shadow of window and wall for water stain or water droplet. If you cannot clearly confirm there is a water stain or water droplet, state that there are no water stains or water droplets. Do not invent objects that do not exist in the picture.
+Do NOT mistake shadow, light reflection, tile gloss, edge shadow of window and wall for water stain or water droplet. 
+If you cannot clearly confirm there is a water stain or water droplet, state that there are no water stains or water droplets. Do not invent objects that do not exist in the picture.
   """
 ,
 

@@ -7,6 +7,7 @@ from services.log_service import logger
 from services.dao.db_pool import init_pool, close_all_pool
 import atexit
 from routers.user_router import router as user_router
+from routers.logview_router import router as logview_router
 
 os.makedirs("./tmp", exist_ok=True)
 

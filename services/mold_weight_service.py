@@ -349,7 +349,6 @@ def calc_inducer_cap_score(hit_features: List[dict], lesion_keywords: List) -> t
             inducer_raw += w
         else:
             benefit_score += w
-
     if lesion_score > 0:
         # 存在病灶，诱因不封顶
         inducer_score = inducer_raw
