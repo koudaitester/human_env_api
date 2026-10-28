@@ -58,7 +58,7 @@ class LlamaService:
         #压缩base64图片
         # img_b64 = resize_image_for_llava(img_b64, 1000)
 
-        # logger.info("prompt: " + prompt)
+        # logger.info("prompt: "  ￥+ prompt)
         resp = chat(
             model="llava",
             messages=[{

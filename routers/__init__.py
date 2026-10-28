@@ -7,6 +7,7 @@ from .env_router import router as env_router
 from .mold_router import router as mold_router
 from .report_router import router as report_router
 from .business_router import router as business_router
+from .mold_stream_router import router as mold_stream_router
 
 api_router = APIRouter()
 
@@ -18,3 +19,4 @@ api_router.include_router(env_router, prefix="/env", tags=["人居环境评估"]
 api_router.include_router(mold_router, prefix="/mold", tags=["霉菌检测"]    )
 api_router.include_router(report_router, prefix="/report", tags=["评估报告"])
 api_router.include_router(business_router, prefix="/business", tags=["业务接口"])
+api_router.include_router(mold_stream_router, prefix="/mold/stream", tags=["滑动窗口"])

@@ -30,6 +30,7 @@ def parse_feature_groups(rule_text: str):
     mutex_groups: List[dict] = []
     negation_words: List[str] = []
     humidity_rules: List[str] = []
+    lesion_kw_list: List[str] = []
     temp_config = {"low":18.0, "high":28.0, "score":5, "template":""}
     level_rules = []
     soft_downgrade_rules: List[Tuple[str, str, str, int, str]] = []
@@ -124,8 +125,11 @@ def parse_feature_groups(rule_text: str):
                 soft_append_rules.append((pat_raw, t_name, sc, msg))
             except Exception as e:
                 logger.warning(f"解析追加软规则失败 line={line}, err={e}")
-
-    return groups, mutex_groups, negation_words, humidity_rules, temp_config, level_rules, soft_downgrade_rules, soft_append_rules
+        elif section == "LESION_KEYWORDS":
+            lesion_kw_list = [w.strip() for w in line.split(",") if w.strip()]
+        elif section == "MAX_PURE_INDUCER":
+            MAX_PURE_INDUCER = int(line.strip())
+    return groups, mutex_groups, negation_words, humidity_rules, temp_config, level_rules, soft_downgrade_rules, soft_append_rules, lesion_kw_list
 
 def resolve_mutex_features(hit_features: list[dict], mutex_groups: list[dict]) -> list[dict]:
     """
@@ -215,10 +219,11 @@ def extract_features(img_struct: dict, feature_group: List, negation_words: List
 
     # 遍历规则组，组内任一关键词命中即记录
     hit_features = []
+    logger.info("raw_full_text: " + raw_full_text)
     for keywords, weight, suggest in feature_group:
         for kw in keywords:
-            if kw.lower() in all_text:
-                if _is_negated(all_text, kw, negation_words):
+            if kw.lower() in raw_full_text:
+                if _is_negated(raw_full_text, kw, negation_words):
                     logger.info(f"[mold_weight] 关键词 {kw} 被否定词否定，忽略")
                     continue
                 hit_features.append({
@@ -247,6 +252,7 @@ def extract_features(img_struct: dict, feature_group: List, negation_words: List
             logger.warning(f"追加正则编译失败 {pat_str}: {e}")
 
     if raw_full_text is not None:
+        # ===================== 原有逻辑【深色斑块专属消歧义】，原样保留 =====================
         for f in hit_features:
             if f["name"] != "深色斑块":
                 continue
@@ -261,7 +267,8 @@ def extract_features(img_struct: dict, feature_group: List, negation_words: List
                         f["weight"] = sc
                         f["suggest"] = msg
                         logger.info("[mold_weight][soft_rule] mold spot 降级为普通水渍")
-                    break
+                        break
+
         # 追加 water stain / water mark 特征
         for pat, t_name, sc, msg in append_compiled:
             if pat.search(raw_full_text):
@@ -272,6 +279,26 @@ def extract_features(img_struct: dict, feature_group: List, negation_words: List
                     "weight": sc,
                     "suggest": msg
                 })
+
+        # ========== === 修改新增：通用消歧义分支 start ==========
+        # 读取soft_downgrade_raw里的特殊标记，区分「深色斑块规则」和「通用抵消规则」
+        # 约定md里通用消歧义 action = "offset"，t_name 是目标特征名，sc是扣减值
+        for pat, action, target_feature, delta, tip in downgrade_compiled:
+            if action != "offset":
+                continue
+            if pat.search(raw_full_text):
+                logger.info(f"[mold_weight][offset_rule] 命中通用抵消规则：{tip}")
+                # 查找目标特征并扣减分数
+                for f in hit_features:
+                    if f["name"] == target_feature:
+                        old_w = f["weight"]
+                        f["weight"] += delta
+                        logger.info(f"[mold_weight][offset_rule] 特征 {target_feature} 原值 {old_w} → {f['weight']}")
+                        if f["weight"] <= 0:
+                            hit_features.remove(f)
+                            logger.info(f"[mold_weight][offset_rule] {target_feature} 分值归零，移除")
+                        break
+        # ========== === 修改新增：通用消歧义分支 end ==========
 
     return hit_features
 
@@ -301,13 +328,12 @@ def _decide_level(total_score: int, level_rules: List) -> Tuple[str, str]:
     return "低风险", "risk-low"
 
 #弱因子封顶分数接口
-def calc_inducer_cap_score(hit_features: List[dict]) -> tuple[int, int, int]:
+def calc_inducer_cap_score(hit_features: List[dict], lesion_keywords: List) -> tuple[int, int, int]:
     """
     区分病灶 / 诱因 / 有利减分，实现【无病灶时诱因封顶20】规则
     :param hit_features: 经过互斥去重后的命中特征列表
     :return: (lesion_score, inducer_score, benefit_score)
     """
-    LESION_KEYWORDS = {"深色斑块", "点状深色小点", "积水", "起皮", "水痕印记", "水珠", "mold"}
     MAX_PURE_INDUCER = 20
 
     lesion_score = 0
@@ -317,7 +343,7 @@ def calc_inducer_cap_score(hit_features: List[dict]) -> tuple[int, int, int]:
     for f in hit_features:
         kw = f["matched_keyword"]
         w = f["weight"]
-        if kw in LESION_KEYWORDS:
+        if kw in lesion_keywords:
             lesion_score += w
         elif w > 0:
             inducer_raw += w
@@ -359,10 +385,11 @@ def calc_mold_weight_result(
     LEVEL_RULES = []
     SOFT_DOWNGRADE_RAW = []
     SOFT_APPEND_RAW = []
+    LESION_KEYWORDS = []
 
     if rule_text.strip():
-        logger.info("命中features知识库策略： " + rule_text)
-        FEATURE_GROUPS, MUTEX_GROUPS, NEGATION_WORDS, HUMIDITY_RULES, TEMP_CONFIG, LEVEL_RULES, SOFT_DOWNGRADE_RAW, SOFT_APPEND_RAW = parse_feature_groups(rule_text)
+        logger.info("命中features知识库策略")
+        FEATURE_GROUPS, MUTEX_GROUPS, NEGATION_WORDS, HUMIDITY_RULES, TEMP_CONFIG, LEVEL_RULES, SOFT_DOWNGRADE_RAW, SOFT_APPEND_RAW, LESION_KEYWORDS = parse_feature_groups(rule_text)
     else:
         logger.info("未命中features知识库策略")
 
@@ -372,7 +399,7 @@ def calc_mold_weight_result(
     features = resolve_mutex_features(features, MUTEX_GROUPS)
 
     # 调用抽出来的分数计算
-    lesion_score, inducer_score, benefit_score = calc_inducer_cap_score(features)
+    lesion_score, inducer_score, benefit_score = calc_inducer_cap_score(features, LESION_KEYWORDS)
 
     img_total = lesion_score + inducer_score + benefit_score
     img_total = max(0, img_total)
@@ -389,6 +416,7 @@ def calc_mold_weight_result(
             suggestions.append({"weight": h_score, "text": h_suggest})
 
     # 3. 温度贡献（有值才算）
+    logger.info("温度: " + str(temperature))
     if temperature is not None:
         logger.info("温度贡献命中")
         t_score, t_suggest = _temperature_contribution(temperature, TEMP_CONFIG)

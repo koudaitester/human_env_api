@@ -18,6 +18,7 @@ dirt,dirty||10||墙面/角落存在积尘脏污，积尘在高湿环境易滋生
 密闭,不通风,空气不流通,poor ventilation||5||空间相对密闭，建议增加通风频次
 排风,排风扇,排气扇,exhaust fan||-8||空间配有排风设备，合理开启可以降低潮湿风险
 除湿机,除湿设备,dehumidifier||-12||现场配有除湿设备，合理使用能够抑制霉菌滋生
+wood,wooden||30||老旧木质表面存在积污，存在滋生霉菌风险，建议伍德灯复检，加强通风除湿
 
 # MUTEX_GROUPS
 ["点状深色小点","深色斑块","dark patch","dark spot"]||深色痕迹同源互斥
@@ -43,6 +44,30 @@ dirt,dirty||10||墙面/角落存在积尘脏污，积尘在高湿环境易滋生
 # SOFT_DOWNGRADE_RULES
 \b(a small amount of mold|a small mold spot|visible mold|some mold spots)\b||only_keep||深色斑块||81||墙面识别到深色斑块样痕迹，有可能是霉斑、污渍，此模型只做辅助评估；建议近距离实地观察，触摸辨别，同步控制环境湿度
 \b(some appearing to be mold|or mold|free of mold)\b||convert||水痕印记||20||墙面存在水痕印记/地面水渍，排查渗水源并持续观察
+\b(wood|wooden)\b.*?\bdirt\b||offset||dirt||-10||木质表面普通尘土，抵消 dirt 10分
 
 # SOFT_APPEND_FEATURE_RULES
 \b(water stain|water mark)\b||append||水痕印记||20||墙面存在水痕印记/地面水渍，排查渗水源并持续观察
+
+# LESION_KEYWORDS
+深色斑块,点状深色小点,积水,起皮,水痕印记,水珠,mold,wood,wooden
+
+# SPACE_MAP
+卫生间: bathroom,toilet
+厨房: kitchen
+卧室: bedroom
+客厅: living room,lounge
+书房: study
+地下室: basement
+
+# FIELD_KEYWORDS
+wall_info: wall,walls,mold,stain,water mark,dirt,墙面,霉斑,水渍
+ceiling_info: ceiling,top,水渍,霉斑,stain
+floor_info: floor,ground,water,积水,水渍
+moisture_trace: droplet,condensation,水珠,凝露
+furniture_layout: furniture,cabinet,chair,towel rack,家具
+window_info: window,窗户
+light_vent: light,dark,vent,ventilation,采光,昏暗
+clutter: clutter,mess,杂物
+cleanliness: clean,dirty,干净,脏污
+other_detail:

@@ -61,6 +61,11 @@ async def mold_full(
         raise HTTPException(status_code=400, detail="图片不能超过10MB")
     if file.content_type not in ALLOWED_MIME:
         raise HTTPException(status_code=400, detail="仅支持 jpg / png 图片")
+    
+    if temperature is None:
+        raise HTTPException(status_code=400, detail="温度不能为空")
+    if humidity is None:
+        raise HTTPException(status_code=400, detail="湿度不能为空")
 
     # 非必传：有值才校验范围，为空直接跳过
     if temperature is not None:
