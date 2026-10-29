@@ -3,8 +3,8 @@
 积水,地面积水,standing water,pooled water,water on the floor||30||地面存在积水，及时擦干，保持地面干燥
 起皮,鼓包,墙皮脱落,peeling,bulging||25||墙皮起皮鼓包，大概率受潮，建议检查墙体内部渗水
 dirt,dirty||10||墙面/角落存在积尘脏污，积尘在高湿环境易滋生霉菌孢子，建议及时清洁，控制环境湿度
-水痕印记,水渍,water stain,water mark,stain||30||墙面存在水痕印记/地面水渍，排查渗水源并持续观察
-水珠,冷凝水,结露,water droplet,condensation||30||观察到冷凝水珠，加强通风，降低室内湿度
+水痕印记,水渍,water stain,water mark,stain||20||墙面存在水痕印记/地面水渍，排查渗水源并持续观察
+水珠,冷凝水,结露,water droplet,condensation||20||观察到冷凝水珠，加强通风，降低室内湿度
 紧贴墙面,紧靠墙面,贴墙摆放,靠墙,against wall||6||家具/杂物紧贴墙面摆放，建议预留空隙，减少受潮发霉风险
 纸箱,硬纸箱,纸箱子,cardboard box||6||室内堆放易吸潮纸箱，建议远离墙面并定期清理
 被子,被褥,厚床品,bedding||5||厚床品容易蓄积潮气，建议定期晾晒
@@ -43,7 +43,7 @@ wood,wooden||30||老旧木质表面存在积污，存在滋生霉菌风险，建
 
 # SOFT_DOWNGRADE_RULES
 \b(a small amount of mold|a small mold spot|visible mold|some mold spots)\b||only_keep||深色斑块||81||墙面识别到深色斑块样痕迹，有可能是霉斑、污渍，此模型只做辅助评估；建议近距离实地观察，触摸辨别，同步控制环境湿度
-\b(some appearing to be mold|or mold|free of mold|not contain any mold|other visible signs of mold growth|no visible mold|not clear if it is a mold stain or a fungal growth)\b||convert||水痕印记||20||墙面疑似存在水痕印记/地面水渍，排查渗水源并持续观察
+\b(some appearing to be mold|or mold|free of mold|not contain any mold|other visible signs of mold growth|no visible mold|not clear if it is a mold stain or a fungal growth|does not contain any visible mold)\b||convert||水痕印记||20||墙面疑似存在水痕印记/地面水渍，排查渗水源并持续观察
 \b(wood|wooden)\b.*?\bdirt\b||offset||dirt||-10||木质表面普通尘土，抵消 dirt 10分
 
 # SOFT_APPEND_FEATURE_RULES

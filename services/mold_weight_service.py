@@ -392,6 +392,22 @@ def calc_mold_weight_result(
     else:
         logger.info("未命中features知识库策略")
 
+    logger.info(f"img_struct: {img_struct}" )
+
+    # 忽略场景
+    ignore_scene_pat = re.compile(r"this image is not a wall/ceiling/floor scene.", re.IGNORECASE)
+    raw_text = img_struct["__raw_text__"]
+    logger.info(f"raw_text: {raw_text}")
+    if ignore_scene_pat.search(raw_text):
+        # 直接返回：无效场景，不跑特征匹配、不打分
+        return {
+            "riskLevel": "invalid",
+            "riskClass": "invalid",
+            "desc": "图片非墙面/顶面/地面场景，不做霉菌评估",
+            "suggest": "",
+            "extraNote": "请重新拍照，上传正确的场景图片"
+        }
+
     # 1. 图像特征命中
     features = extract_features(img_struct, FEATURE_GROUPS, NEGATION_WORDS, SOFT_DOWNGRADE_RAW, SOFT_APPEND_RAW)
     # 互斥组去重

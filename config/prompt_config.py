@@ -16,6 +16,9 @@ If you clearly observe fuzzy clustered fungal mold growth, you must state the pr
 
 Do NOT mistake shadow, light reflection, tile gloss, edge shadow of window and wall for water stain or water droplet. 
 If you cannot clearly confirm there is a water stain or water droplet, state that there are no water stains or water droplets. Do not invent objects that do not exist in the picture.
+
+If the image is not an indoor wall, ceiling or floor scene for mold inspection:
+You MUST ONLY output exactly this single sentence: "This image is not a wall/ceiling/floor scene."
   """
 ,
 
